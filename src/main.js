@@ -144,16 +144,19 @@ function updateCamera(){
 
 const points = [];
 
-const height = 2;
+const MAX_HEIGHT = 4;
+const INITIAL_HEIGHT = 2;
 const segments = 64;
 
 const thickness = 0.05;
 
 
 // outer wall
-for (let i = 0; i <= 20; i++) {
+for (let i = 0; i <= 40; i++) {
 
-  const y = i / 20 * height;
+  const y =
+    i / 40 * INITIAL_HEIGHT;
+
 
   let radius;
 
@@ -179,11 +182,11 @@ for (let i = 0; i <= 20; i++) {
 
 
 // inner wall (reverse direction)
-for (let i = 20; i >= 0; i--) {
+// inner wall
+for (let i = 40; i >= 0; i--) {
 
   const y =
-    i / 20 * height;
-
+    i / 40 * INITIAL_HEIGHT;
 
   let radius;
 
@@ -443,12 +446,12 @@ const brushStrength =
 1 -
 (heightDistance / BRUSH_HEIGHT);
 
-    const normalized =
-      THREE.MathUtils.clamp(
-        oy / height,
-        0,
-        1
-      );
+const normalized =
+  THREE.MathUtils.clamp(
+    oy / INITIAL_HEIGHT,
+    0,
+    1
+  );
 
 
 const influence = 1;
@@ -489,14 +492,9 @@ THREE.MathUtils.clamp(
 
 const newY =
 oy +
-THREE.MathUtils.clamp(
-  heightChange *
-  influence *
-  brushStrength *
-  3,
-  -0.01,
-  0.01
-);
+heightChange *
+brushStrength *
+0.05;
 
 
     pos.setX(
@@ -513,11 +511,11 @@ THREE.MathUtils.clamp(
 
     pos.setY(
       i,
-      THREE.MathUtils.clamp(
-        newY,
-        0,
-        3
-      )
+THREE.MathUtils.clamp(
+  newY,
+  0,
+  MAX_HEIGHT
+)
     );
 
   }

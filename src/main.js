@@ -451,10 +451,7 @@ const brushStrength =
       );
 
 
-    const influence =
-      Math.sin(
-        normalized * Math.PI
-      );
+const influence = 1;
 
 
     // radius

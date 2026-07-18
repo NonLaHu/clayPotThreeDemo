@@ -24,6 +24,11 @@ camera.lookAt(
   0
 );
 
+const BRUSH_HEIGHT = 0.25;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let sculptPoint = null;
+
 let targetRadiusChange = 0;
 let targetHeightChange = 0;
 
@@ -209,9 +214,6 @@ const geometry =
     segments
   );
 
-  const originalPositions =
-  geometry.attributes.position.array.slice();
-
 const material = new THREE.MeshStandardMaterial({
   color: 0xb56535,
   roughness: 1.0,
@@ -329,10 +331,41 @@ window.addEventListener(
 
 
 window.addEventListener(
-  "pointermove",
-  (e)=>{
+"pointermove",
+(e)=>{
 
-    if(!dragging) return;
+
+  mouse.x =
+    (e.clientX / window.innerWidth) * 2 - 1;
+
+  mouse.y =
+    -(e.clientY / window.innerHeight) * 2 + 1;
+
+
+  raycaster.setFromCamera(
+    mouse,
+    camera
+  );
+
+
+  const hit =
+    raycaster.intersectObject(
+      pot
+    );
+
+
+  if(hit.length){
+    sculptPoint =
+      hit[0].point.clone();
+  }
+  else{
+    sculptPoint = null;
+  }
+
+
+  if(!dragging)
+    return;
+
 
 
     const dx =
@@ -373,6 +406,10 @@ window.addEventListener(
 
 function deformClay(radiusChange, heightChange){
 
+  if(!sculptPoint)
+    return;
+
+
   const pos =
     geometry.attributes.position;
 
@@ -392,6 +429,19 @@ clayPositions[i * 3 + 1];
 const oz =
 clayPositions[i * 3 + 2];
 
+const heightDistance =
+Math.abs(
+  oy - sculptPoint.y
+);
+
+
+if(heightDistance > BRUSH_HEIGHT)
+  continue;
+
+
+const brushStrength =
+1 -
+(heightDistance / BRUSH_HEIGHT);
 
     const normalized =
       THREE.MathUtils.clamp(
@@ -422,12 +472,15 @@ clayPositions[i * 3 + 2];
       );
 
 
-    const deformation =
-    THREE.MathUtils.clamp(
-      radiusChange * influence * 3,
-      -0.003,
-      0.003
-    );
+const deformation =
+THREE.MathUtils.clamp(
+  radiusChange *
+  influence *
+  brushStrength *
+  3,
+  -0.003,
+  0.003
+);
 
 
     const newRadius =
@@ -437,13 +490,16 @@ clayPositions[i * 3 + 2];
     );
 
 
-    const newY =
-    oy +
-    THREE.MathUtils.clamp(
-    heightChange * influence * 3,
-    -0.01,
-    0.01
-    );
+const newY =
+oy +
+THREE.MathUtils.clamp(
+  heightChange *
+  influence *
+  brushStrength *
+  3,
+  -0.01,
+  0.01
+);
 
 
     pos.setX(

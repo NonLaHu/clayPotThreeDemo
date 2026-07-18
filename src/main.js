@@ -652,23 +652,16 @@ if(hand){
 
   const index = hand[8];
 
-  // temporary mapping
-  finger.position.set(
-    (index.x - 0.5) * 4,
+  targetFinger.set(
+    (0.5 - index.x) * 4,
     (1 - index.y) * 3,
     0
   );
 
-  targetFinger.set(
-  (index.x - 0.5) * 4,
-  (1 - index.y) * 3,
-  0
-);
-
-finger.position.lerp(
-  targetFinger,
-  0.25
-);
+  finger.position.lerp(
+    targetFinger,
+    0.25
+  );
 
 }
 

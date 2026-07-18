@@ -650,18 +650,49 @@ const hand = detectHand(
 
 if(hand){
 
-  const index = hand[8];
+  const index =
+    hand[8];
 
-  targetFinger.set(
-    (0.5 - index.x) * 4,
-    (1 - index.y) * 3,
-    0
+  mouse.x =
+    1 - index.x * 2;
+
+  mouse.y =
+    1 - index.y * 2;
+
+  raycaster.setFromCamera(
+    mouse,
+    camera
   );
 
-  finger.position.lerp(
+  const hit =
+    raycaster.intersectObject(
+      pot
+    );
+
+if(hit.length){
+
+const normal =
+  hit[0].face.normal.clone();
+
+normal.transformDirection(
+  pot.matrixWorld
+);
+
+targetFinger.copy(
+  hit[0].point
+);
+
+targetFinger.addScaledVector(
+  normal,
+  0.03
+);
+
+}
+
+finger.position.lerp(
     targetFinger,
-    0.25
-  );
+    0.2
+);
 
 }
 

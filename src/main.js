@@ -330,6 +330,18 @@ light.position.set(
 
 scene.add(light);
 
+const targetFinger =
+new THREE.Vector3();
+
+const finger =
+new THREE.Mesh(
+  new THREE.SphereGeometry(0.05),
+  new THREE.MeshBasicMaterial({
+    color:0xff0000
+  })
+);
+
+scene.add(finger);
 
 async function setup(){
 
@@ -631,18 +643,32 @@ function animate(){
 requestAnimationFrame(
 animate
 );
-const hand =
-detectHand(
+const hand = detectHand(
   video,
   performance.now()
 );
 
-
 if(hand){
 
-  console.log(
-    hand
+  const index = hand[8];
+
+  // temporary mapping
+  finger.position.set(
+    (index.x - 0.5) * 4,
+    (1 - index.y) * 3,
+    0
   );
+
+  targetFinger.set(
+  (index.x - 0.5) * 4,
+  (1 - index.y) * 3,
+  0
+);
+
+finger.position.lerp(
+  targetFinger,
+  0.25
+);
 
 }
 

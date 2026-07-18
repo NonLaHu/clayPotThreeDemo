@@ -15,6 +15,7 @@ document.body.appendChild(video);
 
 
 
+
 async function startCamera(){
 
   const stream =
@@ -91,62 +92,62 @@ let cameraLastY = 0;
 
 let cameraAngle = 0.45;
 
-window.addEventListener(
-  "pointerdown",
-  (e)=>{
+// window.addEventListener(
+//   "pointerdown",
+//   (e)=>{
 
-    if(e.ctrlKey){
+//     if(e.ctrlKey){
 
-      cameraDragging = true;
-      cameraLastY = e.clientY;
+//       cameraDragging = true;
+//       cameraLastY = e.clientY;
 
-    }
+//     }
 
-  }
-);
-
-
-window.addEventListener(
-  "pointerup",
-  ()=>{
-
-    cameraDragging = false;
-
-  }
-);
+//   }
+// );
 
 
-window.addEventListener(
-  "pointermove",
-  (e)=>{
+// window.addEventListener(
+//   "pointerup",
+//   ()=>{
 
-    if(!cameraDragging)
-      return;
+//     cameraDragging = false;
 
-
-    const delta =
-      (e.clientY - cameraLastY)
-      * 0.005;
+//   }
+// );
 
 
-    cameraLastY = e.clientY;
+// window.addEventListener(
+//   "pointermove",
+//   (e)=>{
+
+//     if(!cameraDragging)
+//       return;
 
 
-    cameraAngle += delta;
+//     const delta =
+//       (e.clientY - cameraLastY)
+//       * 0.005;
 
 
-    cameraAngle =
-      THREE.MathUtils.clamp(
-        cameraAngle,
-        -0.2,
-        1.2
-      );
+//     cameraLastY = e.clientY;
 
 
-    updateCamera();
+//     cameraAngle += delta;
 
-  }
-);
+
+//     cameraAngle =
+//       THREE.MathUtils.clamp(
+//         cameraAngle,
+//         -0.2,
+//         1.2
+//       );
+
+
+//     updateCamera();
+
+//   }
+// );
 
 
 function updateCamera(){
@@ -172,6 +173,9 @@ function updateCamera(){
   );
 
 }
+
+let targetCameraAngle = cameraAngle;
+
 
 // =====================
 // Clay Pot Geometry
@@ -620,6 +624,17 @@ for(
 
 }
 
+function isOpenPalm(hand){
+
+  return (
+    hand[8].y  < hand[6].y  && // index
+    hand[12].y < hand[10].y && // middle
+    hand[16].y < hand[14].y && // ring
+    hand[20].y < hand[18].y    // pinky
+  );
+
+}
+
 // =====================
 // Animation
 // =====================
@@ -638,6 +653,8 @@ function updateClay(){
 
 }
 
+
+
 function animate(){
 
 requestAnimationFrame(
@@ -649,6 +666,31 @@ const hand = detectHand(
 );
 
 if(hand){
+
+  if(isOpenPalm(hand)){
+
+    const palmY =
+    (
+      hand[0].y +
+      hand[5].y +
+      hand[9].y +
+      hand[13].y +
+      hand[17].y
+    ) / 5;
+
+
+    targetCameraAngle =
+      THREE.MathUtils.mapLinear(
+        palmY,
+        0.2,
+        0.8,
+        -0.2,
+        1.2
+      );
+
+  }
+
+
 
   const index =
     hand[8];
@@ -696,6 +738,12 @@ finger.position.lerp(
 
 }
 
+cameraAngle +=
+  (targetCameraAngle - cameraAngle)
+  * 0.1;
+
+updateCamera();
+
 updateClay();
 
 
@@ -708,6 +756,7 @@ camera
 );
 
 }
+
 
 animate();
 

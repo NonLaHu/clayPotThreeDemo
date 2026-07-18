@@ -676,14 +676,17 @@ function getPinchStrength(hand){
   const distance =
     thumb.distanceTo(index);
 
-
-  return THREE.MathUtils.mapLinear(
+return THREE.MathUtils.clamp(
+  THREE.MathUtils.mapLinear(
     distance,
     0.02,
     0.15,
     1,
     0
-  );
+  ),
+  0,
+  1
+);
 
 }
 

@@ -374,16 +374,31 @@ window.addEventListener(
     const dx =
       (e.clientX - lastX) * 0.003;
 
-    const dy =
-      (lastY - e.clientY) * 0.005;
+let dy = 0;
+
+if(e.shiftKey){
+
+  dy =
+    (lastY - e.clientY)
+    * 0.005;
+
+}
 
 
     lastX = e.clientX;
     lastY = e.clientY;
 
 
-    targetRadiusChange += dx * CLAY_RESISTANCE;
-    targetHeightChange += dy * CLAY_RESISTANCE;
+targetRadiusChange += 
+  dx * CLAY_RESISTANCE;
+
+
+if(e.shiftKey){
+
+  targetHeightChange +=
+    dy * CLAY_RESISTANCE;
+
+}
 
 
     // limit input force
@@ -490,11 +505,16 @@ THREE.MathUtils.clamp(
     );
 
 
-const newY =
-oy +
+const heightScale =
+1 +
 heightChange *
 brushStrength *
-0.05;
+0.8;
+
+
+const newY =
+oy *
+heightScale;
 
 
     pos.setX(

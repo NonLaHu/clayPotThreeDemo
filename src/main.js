@@ -133,7 +133,6 @@ function updateCamera(){
 
 }
 
-
 // =====================
 // Clay Pot Geometry
 // =====================
@@ -143,6 +142,10 @@ const points = [];
 const height = 2;
 const segments = 64;
 
+const thickness = 0.05;
+
+
+// outer wall
 for (let i = 0; i <= 20; i++) {
 
   const y = i / 20 * height;
@@ -159,12 +162,44 @@ for (let i = 0; i <= 20; i++) {
     radius = 0.75 - (y - 1.2) * 0.25;
   }
 
+
   points.push(
     new THREE.Vector2(
       radius,
       y
     )
   );
+
+}
+
+
+// inner wall (reverse direction)
+for (let i = 20; i >= 0; i--) {
+
+  const y =
+    i / 20 * height;
+
+
+  let radius;
+
+  if (y < 0.2) {
+    radius = 0.8;
+  }
+  else if (y < 1.2) {
+    radius = 0.55 + y * 0.15;
+  }
+  else {
+    radius = 0.75 - (y - 1.2) * 0.25;
+  }
+
+
+  points.push(
+    new THREE.Vector2(
+      radius - thickness,
+      y
+    )
+  );
+
 }
 
 

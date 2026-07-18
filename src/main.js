@@ -30,8 +30,7 @@ let targetHeightChange = 0;
 let currentRadiusChange = 0;
 let currentHeightChange = 0;
 
-
-// maximum force
+const CLAY_RESISTANCE = 0.05;
 const MAX_FORCE = 0.005;
 
 const renderer = new THREE.WebGLRenderer({
@@ -312,8 +311,8 @@ window.addEventListener(
     lastY = e.clientY;
 
 
-    targetRadiusChange += dx;
-    targetHeightChange += dy;
+    targetRadiusChange += dx * CLAY_RESISTANCE;
+    targetHeightChange += dy * CLAY_RESISTANCE;
 
 
     // limit input force
@@ -388,26 +387,28 @@ clayPositions[i * 3 + 2];
       );
 
 
+    const deformation =
+    THREE.MathUtils.clamp(
+      radiusChange * influence * 3,
+      -0.003,
+      0.003
+    );
+
+
     const newRadius =
-      radius *
-      (
-        1 +
-        THREE.MathUtils.clamp(
-          radiusChange * influence * 10,
-          -0.25,
-          0.25
-        )
-      );
+    radius *
+    (
+      1 + deformation
+    );
 
 
-    // height
     const newY =
-      oy +
-      THREE.MathUtils.clamp(
-        heightChange * influence * 10,
-        -0.1,
-        0.1
-      );
+    oy +
+    THREE.MathUtils.clamp(
+    heightChange * influence * 3,
+    -0.01,
+    0.01
+    );
 
 
     pos.setX(

@@ -13,8 +13,10 @@ video.style.display="none";
 
 document.body.appendChild(video);
 
+let lastPinchX = null;
 
-
+let pinchActive = false;
+let pinchStartX = 0;
 
 async function startCamera(){
 
@@ -653,6 +655,37 @@ function updateClay(){
 
 }
 
+function getPinchStrength(hand){
+
+  const thumb =
+    new THREE.Vector3(
+      hand[4].x,
+      hand[4].y,
+      hand[4].z
+    );
+
+
+  const index =
+    new THREE.Vector3(
+      hand[8].x,
+      hand[8].y,
+      hand[8].z
+    );
+
+
+  const distance =
+    thumb.distanceTo(index);
+
+
+  return THREE.MathUtils.mapLinear(
+    distance,
+    0.02,
+    0.15,
+    1,
+    0
+  );
+
+}
 
 
 function animate(){
@@ -665,7 +698,41 @@ const hand = detectHand(
   performance.now()
 );
 
+
 if(hand){
+
+    const index =
+      hand[8];
+  const pinch =
+    getPinchStrength(hand);
+
+
+ if(pinch > 0.5){
+
+  if(!pinchActive){
+
+    pinchActive = true;
+    pinchStartX = index.x;
+
+  }
+
+
+  const movement =
+    index.x - pinchStartX;
+
+
+  targetRadiusChange =
+    movement *
+    pinch *
+    CLAY_RESISTANCE;
+
+
+}
+else{
+
+  pinchActive = false;
+
+}
 
   if(isOpenPalm(hand)){
 
@@ -691,10 +758,6 @@ if(hand){
   }
 
 
-
-  const index =
-    hand[8];
-
   mouse.x =
     1 - index.x * 2;
 
@@ -713,21 +776,32 @@ if(hand){
 
 if(hit.length){
 
-const normal =
-  hit[0].face.normal.clone();
+  sculptPoint =
+    hit[0].point.clone();
 
-normal.transformDirection(
-  pot.matrixWorld
-);
 
-targetFinger.copy(
-  hit[0].point
-);
+  const normal =
+    hit[0].face.normal.clone();
 
-targetFinger.addScaledVector(
-  normal,
-  0.03
-);
+  normal.transformDirection(
+    pot.matrixWorld
+  );
+
+
+  targetFinger.copy(
+    hit[0].point
+  );
+
+
+  targetFinger.addScaledVector(
+    normal,
+    0.03
+  );
+
+}
+else{
+
+  sculptPoint = null;
 
 }
 

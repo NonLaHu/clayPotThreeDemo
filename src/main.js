@@ -1,6 +1,41 @@
 import * as THREE from "three";
 import "./style.css";
+import {
+ initHand,
+ detectHand
+} from "./hand.js";
 
+const video =
+document.createElement("video");
+
+
+video.style.display="none";
+
+document.body.appendChild(video);
+
+
+
+async function startCamera(){
+
+  const stream =
+    await navigator.mediaDevices.getUserMedia({
+      video:{
+        width:640,
+        height:480
+      }
+    });
+
+
+  video.srcObject = stream;
+
+  await video.play();
+
+
+  console.log(
+    "camera ready"
+  );
+
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -296,6 +331,16 @@ light.position.set(
 scene.add(light);
 
 
+async function setup(){
+
+  await startCamera();
+
+  await initHand();
+
+}
+
+
+setup();
 
 // =====================
 // Clay Sculpting Control
@@ -586,7 +631,20 @@ function animate(){
 requestAnimationFrame(
 animate
 );
+const hand =
+detectHand(
+  video,
+  performance.now()
+);
 
+
+if(hand){
+
+  console.log(
+    hand
+  );
+
+}
 
 updateClay();
 

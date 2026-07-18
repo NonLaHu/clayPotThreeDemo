@@ -208,8 +208,15 @@ for (let i = 40; i >= 0; i--) {
     )
   );
 
-}
 
+
+}
+points.push(
+  new THREE.Vector2(
+    0,
+    0.08
+  )
+);
 
 const geometry =
   new THREE.LatheGeometry(

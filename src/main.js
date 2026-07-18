@@ -14,7 +14,7 @@ video.style.display="none";
 document.body.appendChild(video);
 
 let lastPinchX = null;
-
+let lastHeightY = null;
 let pinchActive = false;
 let pinchStartX = 0;
 
@@ -579,7 +579,7 @@ const heightScale =
 1 +
 heightChange *
 brushStrength *
-0.8;
+8;
 
 
 const newY =
@@ -655,6 +655,29 @@ function updateClay(){
 
 }
 
+function isHeightGesture(hand){
+
+  const indexOpen =
+    hand[8].y < hand[6].y;
+
+  const middleOpen =
+    hand[12].y < hand[10].y;
+
+  const ringClosed =
+    hand[16].y > hand[14].y;
+
+  const pinkyClosed =
+    hand[20].y > hand[18].y;
+
+
+  return (
+    indexOpen &&
+    middleOpen &&
+    ringClosed &&
+    pinkyClosed
+  );
+}
+
 function getPinchStrength(hand){
 
   const thumb =
@@ -711,7 +734,7 @@ if(hand){
 
 
  if(pinch > 0.5){
-
+  lastHeightY = null;
   if(!pinchActive){
 
     pinchActive = true;
@@ -734,6 +757,44 @@ if(hand){
 else{
 
   pinchActive = false;
+
+}
+
+if(isHeightGesture(hand)){
+
+
+  const middle =
+    hand[12];
+
+
+  if(lastHeightY !== null){
+
+    const movement =
+      lastHeightY - middle.y;
+
+
+    targetHeightChange +=
+      movement *
+      CLAY_RESISTANCE;
+
+
+    targetHeightChange =
+      THREE.MathUtils.clamp(
+        targetHeightChange,
+        -MAX_FORCE,
+        MAX_FORCE
+      );
+
+  }
+
+
+  lastHeightY = middle.y;
+
+
+}
+else{
+
+  lastHeightY = null;
 
 }
 

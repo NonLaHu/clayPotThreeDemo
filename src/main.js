@@ -1,56 +1,63 @@
 import * as THREE from "three";
 import "./style.css";
 import {
- initHand,
- detectHand
+  initHand,
+  detectHand
 } from "./hand.js";
 
-const video =
-document.createElement("video");
 
 const DEBUG = true; // false = hide everything
 
-video.style.position = "absolute";
-video.style.right = "20px";
-video.style.bottom = "20px";
-video.style.width = "320px";
-video.style.border = "2px solid white";
-video.style.zIndex = "10";
-video.style.transform = "scaleX(-1)"; // mirror
+const video = document.createElement("video");
 
-document.body.appendChild(video);
+if (DEBUG) {
+  video.style.position = "absolute";
+  video.style.right = "20px";
+  video.style.bottom = "20px";
+  video.style.width = "320px";
+  video.style.border = "2px solid white";
+  video.style.zIndex = "10";
+  video.style.transform = "scaleX(-1)";
+  document.body.appendChild(video);
+}
+
 
 const HAND_CONNECTIONS = [
 
-[0,1],[1,2],[2,3],[3,4],
+  [0, 1], [1, 2], [2, 3], [3, 4],
 
-[0,5],[5,6],[6,7],[7,8],
+  [0, 5], [5, 6], [6, 7], [7, 8],
 
-[5,9],[9,10],[10,11],[11,12],
+  [5, 9], [9, 10], [10, 11], [11, 12],
 
-[9,13],[13,14],[14,15],[15,16],
+  [9, 13], [13, 14], [14, 15], [15, 16],
 
-[13,17],[17,18],[18,19],[19,20],
+  [13, 17], [17, 18], [18, 19], [19, 20],
 
-[0,17]
+  [0, 17]
 
 ];
 
-const handCanvas = document.createElement("canvas");
-const handCtx = handCanvas.getContext("2d");
+let debugCanvas;
+let debugCtx;
 
-handCanvas.width = 320;
-handCanvas.height = 240;
+if (DEBUG) {
+  debugCanvas = document.createElement("canvas");
+  debugCanvas.width = 320;
+  debugCanvas.height = 240;
 
-handCanvas.style.position = "absolute";
-handCanvas.style.right = "20px";
-handCanvas.style.bottom = "20px";
-handCanvas.style.width = "320px";
-handCanvas.style.height = "240px";
-handCanvas.style.pointerEvents = "none";
-handCanvas.style.zIndex = "20";
+  debugCanvas.style.position = "absolute";
+  debugCanvas.style.right = "20px";
+  debugCanvas.style.bottom = "20px";
+  debugCanvas.style.width = "320px";
+  debugCanvas.style.height = "240px";
+  debugCanvas.style.pointerEvents = "none";
+  debugCanvas.style.zIndex = "20";
 
-document.body.appendChild(handCanvas);
+  document.body.appendChild(debugCanvas);
+
+  debugCtx = debugCanvas.getContext("2d");
+}
 
 
 
@@ -59,13 +66,13 @@ let lastHeightY = null;
 let pinchActive = false;
 let pinchStartX = 0;
 
-async function startCamera(){
+async function startCamera() {
 
   const stream =
     await navigator.mediaDevices.getUserMedia({
-      video:{
-        width:640,
-        height:480
+      video: {
+        width: 640,
+        height: 480
       }
     });
 
@@ -193,7 +200,7 @@ let cameraAngle = 0.45;
 // );
 
 
-function updateCamera(){
+function updateCamera() {
 
   const radius = 5;
 
@@ -378,19 +385,24 @@ light.position.set(
 scene.add(light);
 
 const targetFinger =
-new THREE.Vector3();
+  new THREE.Vector3();
 
-const finger =
-new THREE.Mesh(
-  new THREE.SphereGeometry(0.05),
-  new THREE.MeshBasicMaterial({
-    color:0xff0000
-  })
-);
+let finger;
 
-scene.add(finger);
+if (DEBUG) {
 
-async function setup(){
+  finger = new THREE.Mesh(
+    new THREE.SphereGeometry(0.05),
+    new THREE.MeshBasicMaterial({
+      color: 0xff0000
+    })
+  );
+
+  scene.add(finger);
+
+}
+
+async function setup() {
 
   await startCamera();
 
@@ -419,24 +431,24 @@ const clayProfile = points.map(p => ({
 
 
 window.addEventListener(
-"pointerdown",
-(e)=>{
+  "pointerdown",
+  (e) => {
 
-  if(e.ctrlKey)
-    return;
+    if (e.ctrlKey)
+      return;
 
 
-  dragging = true;
+    dragging = true;
 
-  lastX=e.clientX;
-  lastY=e.clientY;
+    lastX = e.clientX;
+    lastY = e.clientY;
 
-});
+  });
 
 
 window.addEventListener(
   "pointerup",
-  ()=>{
+  () => {
 
     dragging = false;
 
@@ -445,97 +457,97 @@ window.addEventListener(
 
 
 window.addEventListener(
-"pointermove",
-(e)=>{
+  "pointermove",
+  (e) => {
 
 
-  mouse.x =
-    (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.x =
+      (e.clientX / window.innerWidth) * 2 - 1;
 
-  mouse.y =
-    -(e.clientY / window.innerHeight) * 2 + 1;
-
-
-  raycaster.setFromCamera(
-    mouse,
-    camera
-  );
+    mouse.y =
+      -(e.clientY / window.innerHeight) * 2 + 1;
 
 
-  const hit =
-    raycaster.intersectObject(
-      pot
+    raycaster.setFromCamera(
+      mouse,
+      camera
     );
 
 
-  if(hit.length){
-    sculptPoint =
-      hit[0].point.clone();
-  }
-  else{
-    sculptPoint = null;
-  }
+    const hit =
+      raycaster.intersectObject(
+        pot
+      );
 
 
-  if(!dragging)
-    return;
+    if (hit.length) {
+      sculptPoint =
+        hit[0].point.clone();
+    }
+    else {
+      sculptPoint = null;
+    }
+
+
+    if (!dragging)
+      return;
 
 
 
     const dx =
       (e.clientX - lastX) * 0.003;
 
-let dy = 0;
+    let dy = 0;
 
-if(e.shiftKey){
+    if (e.shiftKey) {
 
-  dy =
-    (lastY - e.clientY)
-    * 0.005;
+      dy =
+        (lastY - e.clientY)
+        * 0.005;
 
-}
+    }
 
 
     lastX = e.clientX;
     lastY = e.clientY;
 
 
-targetRadiusChange += 
-  dx * CLAY_RESISTANCE;
+    targetRadiusChange +=
+      dx * CLAY_RESISTANCE;
 
 
-if(e.shiftKey){
+    if (e.shiftKey) {
 
-  targetHeightChange +=
-    dy * CLAY_RESISTANCE;
+      targetHeightChange +=
+        dy * CLAY_RESISTANCE;
 
-}
+    }
 
 
     // limit input force
 
     targetRadiusChange =
-    THREE.MathUtils.clamp(
-      targetRadiusChange,
-      -MAX_FORCE,
-      MAX_FORCE
-    );
+      THREE.MathUtils.clamp(
+        targetRadiusChange,
+        -MAX_FORCE,
+        MAX_FORCE
+      );
 
 
     targetHeightChange =
-    THREE.MathUtils.clamp(
-      targetHeightChange,
-      -MAX_FORCE,
-      MAX_FORCE
-    );
+      THREE.MathUtils.clamp(
+        targetHeightChange,
+        -MAX_FORCE,
+        MAX_FORCE
+      );
 
   }
 );
 
 
-function deformClay(radiusChange, heightChange){
+function deformClay(radiusChange, heightChange) {
 
-  if(!sculptPoint)
+  if (!sculptPoint)
     return;
 
 
@@ -543,44 +555,44 @@ function deformClay(radiusChange, heightChange){
     geometry.attributes.position;
 
 
-  for(
+  for (
     let i = 0;
     i < pos.count;
     i++
-  ){
+  ) {
 
-const ox =
-clayPositions[i * 3];
+    const ox =
+      clayPositions[i * 3];
 
-const oy =
-clayPositions[i * 3 + 1];
+    const oy =
+      clayPositions[i * 3 + 1];
 
-const oz =
-clayPositions[i * 3 + 2];
+    const oz =
+      clayPositions[i * 3 + 2];
 
-const heightDistance =
-Math.abs(
-  oy - sculptPoint.y
-);
-
-
-if(heightDistance > BRUSH_HEIGHT)
-  continue;
+    const heightDistance =
+      Math.abs(
+        oy - sculptPoint.y
+      );
 
 
-const brushStrength =
-1 -
-(heightDistance / BRUSH_HEIGHT);
-
-const normalized =
-  THREE.MathUtils.clamp(
-    oy / INITIAL_HEIGHT,
-    0,
-    1
-  );
+    if (heightDistance > BRUSH_HEIGHT)
+      continue;
 
 
-const influence = 1;
+    const brushStrength =
+      1 -
+      (heightDistance / BRUSH_HEIGHT);
+
+    const normalized =
+      THREE.MathUtils.clamp(
+        oy / INITIAL_HEIGHT,
+        0,
+        1
+      );
+
+
+    const influence = 1;
 
 
     // radius
@@ -598,34 +610,34 @@ const influence = 1;
       );
 
 
-const deformation =
-THREE.MathUtils.clamp(
-  radiusChange *
-  influence *
-  brushStrength *
-  3,
-  -0.003,
-  0.003
-);
+    const deformation =
+      THREE.MathUtils.clamp(
+        radiusChange *
+        influence *
+        brushStrength *
+        3,
+        -0.003,
+        0.003
+      );
 
 
     const newRadius =
-    radius *
-    (
-      1 + deformation
-    );
+      radius *
+      (
+        1 + deformation
+      );
 
 
-const heightScale =
-1 +
-heightChange *
-brushStrength *
-8;
+    const heightScale =
+      1 +
+      heightChange *
+      brushStrength *
+      8;
 
 
-const newY =
-oy *
-heightScale;
+    const newY =
+      oy *
+      heightScale;
 
 
     pos.setX(
@@ -642,11 +654,11 @@ heightScale;
 
     pos.setY(
       i,
-THREE.MathUtils.clamp(
-  newY,
-  0,
-  MAX_HEIGHT
-)
+      THREE.MathUtils.clamp(
+        newY,
+        0,
+        MAX_HEIGHT
+      )
     );
 
   }
@@ -654,23 +666,23 @@ THREE.MathUtils.clamp(
 
   pos.needsUpdate = true;
 
-for(
- let i = 0;
- i < pos.count * 3;
- i++
-){
-  clayPositions[i] =
-    pos.array[i];
-}
+  for (
+    let i = 0;
+    i < pos.count * 3;
+    i++
+  ) {
+    clayPositions[i] =
+      pos.array[i];
+  }
 
   geometry.computeVertexNormals();
 
 }
 
-function isOpenPalm(hand){
+function isOpenPalm(hand) {
 
   return (
-    hand[8].y  < hand[6].y  && // index
+    hand[8].y < hand[6].y && // index
     hand[12].y < hand[10].y && // middle
     hand[16].y < hand[14].y && // ring
     hand[20].y < hand[18].y    // pinky
@@ -682,7 +694,7 @@ function isOpenPalm(hand){
 // Animation
 // =====================
 
-function updateClay(){
+function updateClay() {
 
   deformClay(
     targetRadiusChange,
@@ -696,7 +708,7 @@ function updateClay(){
 
 }
 
-function isHeightGesture(hand){
+function isHeightGesture(hand) {
 
   const indexOpen =
     hand[8].y < hand[6].y;
@@ -719,7 +731,7 @@ function isHeightGesture(hand){
   );
 }
 
-function getPinchStrength(hand){
+function getPinchStrength(hand) {
 
   const thumb =
     new THREE.Vector3(
@@ -740,246 +752,254 @@ function getPinchStrength(hand){
   const distance =
     thumb.distanceTo(index);
 
-return THREE.MathUtils.clamp(
-  THREE.MathUtils.mapLinear(
-    distance,
-    0.02,
-    0.15,
-    1,
-    0
-  ),
-  0,
-  1
-);
+  return THREE.MathUtils.clamp(
+    THREE.MathUtils.mapLinear(
+      distance,
+      0.02,
+      0.15,
+      1,
+      0
+    ),
+    0,
+    1
+  );
 
 }
 
 
-function animate(){
+function animate() {
 
-requestAnimationFrame(
-animate
-);
-const hand = detectHand(
-  video,
-  performance.now()
-);
+  requestAnimationFrame(
+    animate
+  );
+  const hand = detectHand(
+    video,
+    performance.now()
+  );
 
 
-if(hand){
+  if (hand) {
 
     const index =
       hand[8];
-  const pinch =
-    getPinchStrength(hand);
+    const pinch =
+      getPinchStrength(hand);
 
-    handCtx.clearRect(
-    0,
-    0,
-    handCanvas.width,
-    handCanvas.height
-);
+    if (DEBUG) {
 
-handCtx.strokeStyle = "lime";
-handCtx.fillStyle = "red";
-handCtx.lineWidth = 2;
 
-for(const p of hand){
-
-    const x = (1 - p.x) * handCanvas.width;
-    const y = p.y * handCanvas.height;
-
-    handCtx.beginPath();
-    handCtx.arc(
-        x,
-        y,
-        4,
+      debugCtx.clearRect(
         0,
-        Math.PI * 2
-    );
-    handCtx.fill();
-
-}
-
-handCtx.strokeStyle = "cyan";
-
-for(const [a,b] of HAND_CONNECTIONS){
-
-    handCtx.beginPath();
-
-    handCtx.moveTo(
-        (1 - hand[a].x) * handCanvas.width,
-        hand[a].y * handCanvas.height
-    );
-
-    handCtx.lineTo(
-        (1 - hand[b].x) * handCanvas.width,
-        hand[b].y * handCanvas.height
-    );
-
-    handCtx.stroke();
-
-}
-
- if(pinch > 0.5){
-  lastHeightY = null;
-  if(!pinchActive){
-
-    pinchActive = true;
-    pinchStartX = index.x;
-
-  }
-
-
-  const movement =
-    index.x - pinchStartX;
-
-
-  targetRadiusChange =
-    movement *
-    pinch *
-    CLAY_RESISTANCE;
-
-
-}
-else{
-
-  pinchActive = false;
-
-}
-
-if(isHeightGesture(hand)){
-
-
-  const middle =
-    hand[12];
-
-
-  if(lastHeightY !== null){
-
-    const movement =
-      lastHeightY - middle.y;
-
-
-    targetHeightChange +=
-      movement *
-      CLAY_RESISTANCE;
-
-
-    targetHeightChange =
-      THREE.MathUtils.clamp(
-        targetHeightChange,
-        -MAX_FORCE,
-        MAX_FORCE
+        0,
+        debugCanvas.width,
+        debugCanvas.height
       );
 
-  }
+      debugCtx.strokeStyle = "lime";
+      debugCtx.fillStyle = "red";
+      debugCtx.lineWidth = 2;
+
+      for (const p of hand) {
+
+        const x = (1 - p.x) * debugCanvas.width;
+        const y = p.y * debugCanvas.height;
+
+        debugCtx.beginPath();
+        debugCtx.arc(
+          x,
+          y,
+          4,
+          0,
+          Math.PI * 2
+        );
+        debugCtx.fill();
+
+      }
+
+      debugCtx.strokeStyle = "cyan";
+
+      for (const [a, b] of HAND_CONNECTIONS) {
+
+        debugCtx.beginPath();
+
+        debugCtx.moveTo(
+          (1 - hand[a].x) * debugCanvas.width,
+          hand[a].y * debugCanvas.height
+        );
+
+        debugCtx.lineTo(
+          (1 - hand[b].x) * debugCanvas.width,
+          hand[b].y * debugCanvas.height
+        );
+
+        debugCtx.stroke();
+
+      }
+    }
+
+    if (pinch > 0.5) {
+      lastHeightY = null;
+      if (!pinchActive) {
+
+        pinchActive = true;
+        pinchStartX = index.x;
+
+      }
 
 
-  lastHeightY = middle.y;
+      const movement =
+        index.x - pinchStartX;
 
 
-}
-else{
-
-  lastHeightY = null;
-
-}
-
-  if(isOpenPalm(hand)){
-
-    const palmY =
-    (
-      hand[0].y +
-      hand[5].y +
-      hand[9].y +
-      hand[13].y +
-      hand[17].y
-    ) / 5;
+      targetRadiusChange =
+        movement *
+        pinch *
+        CLAY_RESISTANCE;
 
 
-    targetCameraAngle =
-      THREE.MathUtils.mapLinear(
-        palmY,
-        0.2,
-        0.8,
-        -0.2,
-        1.2
+    }
+    else {
+
+      pinchActive = false;
+
+    }
+
+    if (isHeightGesture(hand)) {
+
+
+      const middle =
+        hand[12];
+
+
+      if (lastHeightY !== null) {
+
+        const movement =
+          lastHeightY - middle.y;
+
+
+        targetHeightChange +=
+          movement *
+          CLAY_RESISTANCE;
+
+
+        targetHeightChange =
+          THREE.MathUtils.clamp(
+            targetHeightChange,
+            -MAX_FORCE,
+            MAX_FORCE
+          );
+
+      }
+
+
+      lastHeightY = middle.y;
+
+
+    }
+    else {
+
+      lastHeightY = null;
+
+    }
+
+    if (isOpenPalm(hand)) {
+
+      const palmY =
+        (
+          hand[0].y +
+          hand[5].y +
+          hand[9].y +
+          hand[13].y +
+          hand[17].y
+        ) / 5;
+
+
+      targetCameraAngle =
+        THREE.MathUtils.mapLinear(
+          palmY,
+          0.2,
+          0.8,
+          -0.2,
+          1.2
+        );
+
+    }
+
+
+    mouse.x =
+      1 - index.x * 2;
+
+    mouse.y =
+      1 - index.y * 2;
+
+    raycaster.setFromCamera(
+      mouse,
+      camera
+    );
+
+    const hit =
+      raycaster.intersectObject(
+        pot
       );
 
+    if (hit.length) {
+
+      sculptPoint =
+        hit[0].point.clone();
+
+
+      const normal =
+        hit[0].face.normal.clone();
+
+      normal.transformDirection(
+        pot.matrixWorld
+      );
+
+
+      targetFinger.copy(
+        hit[0].point
+      );
+
+
+      targetFinger.addScaledVector(
+        normal,
+        0.03
+      );
+
+    }
+    else {
+
+      sculptPoint = null;
+
+    }
+
+    if (DEBUG && finger) {
+
+      finger.position.lerp(
+        targetFinger,
+        0.2
+      );
+
+    }
+
   }
 
+  cameraAngle +=
+    (targetCameraAngle - cameraAngle)
+    * 0.1;
 
-  mouse.x =
-    1 - index.x * 2;
+  updateCamera();
 
-  mouse.y =
-    1 - index.y * 2;
+  updateClay();
 
-  raycaster.setFromCamera(
-    mouse,
+
+  pot.rotation.y += 0.005;
+
+
+  renderer.render(
+    scene,
     camera
   );
-
-  const hit =
-    raycaster.intersectObject(
-      pot
-    );
-
-if(hit.length){
-
-  sculptPoint =
-    hit[0].point.clone();
-
-
-  const normal =
-    hit[0].face.normal.clone();
-
-  normal.transformDirection(
-    pot.matrixWorld
-  );
-
-
-  targetFinger.copy(
-    hit[0].point
-  );
-
-
-  targetFinger.addScaledVector(
-    normal,
-    0.03
-  );
-
-}
-else{
-
-  sculptPoint = null;
-
-}
-
-finger.position.lerp(
-    targetFinger,
-    0.2
-);
-
-}
-
-cameraAngle +=
-  (targetCameraAngle - cameraAngle)
-  * 0.1;
-
-updateCamera();
-
-updateClay();
-
-
-pot.rotation.y += 0.005;
-
-
-renderer.render(
-scene,
-camera
-);
 
 }
 
@@ -993,7 +1013,7 @@ animate();
 
 window.addEventListener(
   "resize",
-  ()=>{
+  () => {
 
     camera.aspect =
       window.innerWidth /

@@ -8,10 +8,51 @@ import {
 const video =
 document.createElement("video");
 
+const DEBUG = true; // false = hide everything
 
-video.style.display="none";
+video.style.position = "absolute";
+video.style.right = "20px";
+video.style.bottom = "20px";
+video.style.width = "320px";
+video.style.border = "2px solid white";
+video.style.zIndex = "10";
+video.style.transform = "scaleX(-1)"; // mirror
 
 document.body.appendChild(video);
+
+const HAND_CONNECTIONS = [
+
+[0,1],[1,2],[2,3],[3,4],
+
+[0,5],[5,6],[6,7],[7,8],
+
+[5,9],[9,10],[10,11],[11,12],
+
+[9,13],[13,14],[14,15],[15,16],
+
+[13,17],[17,18],[18,19],[19,20],
+
+[0,17]
+
+];
+
+const handCanvas = document.createElement("canvas");
+const handCtx = handCanvas.getContext("2d");
+
+handCanvas.width = 320;
+handCanvas.height = 240;
+
+handCanvas.style.position = "absolute";
+handCanvas.style.right = "20px";
+handCanvas.style.bottom = "20px";
+handCanvas.style.width = "320px";
+handCanvas.style.height = "240px";
+handCanvas.style.pointerEvents = "none";
+handCanvas.style.zIndex = "20";
+
+document.body.appendChild(handCanvas);
+
+
 
 let lastPinchX = null;
 let lastHeightY = null;
@@ -732,6 +773,53 @@ if(hand){
   const pinch =
     getPinchStrength(hand);
 
+    handCtx.clearRect(
+    0,
+    0,
+    handCanvas.width,
+    handCanvas.height
+);
+
+handCtx.strokeStyle = "lime";
+handCtx.fillStyle = "red";
+handCtx.lineWidth = 2;
+
+for(const p of hand){
+
+    const x = (1 - p.x) * handCanvas.width;
+    const y = p.y * handCanvas.height;
+
+    handCtx.beginPath();
+    handCtx.arc(
+        x,
+        y,
+        4,
+        0,
+        Math.PI * 2
+    );
+    handCtx.fill();
+
+}
+
+handCtx.strokeStyle = "cyan";
+
+for(const [a,b] of HAND_CONNECTIONS){
+
+    handCtx.beginPath();
+
+    handCtx.moveTo(
+        (1 - hand[a].x) * handCanvas.width,
+        hand[a].y * handCanvas.height
+    );
+
+    handCtx.lineTo(
+        (1 - hand[b].x) * handCanvas.width,
+        hand[b].y * handCanvas.height
+    );
+
+    handCtx.stroke();
+
+}
 
  if(pinch > 0.5){
   lastHeightY = null;

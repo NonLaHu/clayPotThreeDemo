@@ -391,14 +391,14 @@ let finger;
 
 // if (DEBUG) {
 
-  finger = new THREE.Mesh(
-    new THREE.SphereGeometry(0.05),
-    new THREE.MeshBasicMaterial({
-      color: 0xff0000
-    })
-  );
+finger = new THREE.Mesh(
+  new THREE.SphereGeometry(0.05),
+  new THREE.MeshBasicMaterial({
+    color: 0xff0000
+  })
+);
 
-  scene.add(finger);
+scene.add(finger);
 
 // }
 
@@ -973,7 +973,7 @@ function animate() {
 
     }
 
-    if ( finger) {
+    if (finger) {
 
       finger.position.lerp(
         targetFinger,

@@ -6,7 +6,7 @@ import {
 } from "./hand.js";
 
 
-const DEBUG = true; // false = hide everything
+const DEBUG = false; // false = hide everything
 
 const video = document.createElement("video");
 
@@ -389,7 +389,7 @@ const targetFinger =
 
 let finger;
 
-if (DEBUG) {
+// if (DEBUG) {
 
   finger = new THREE.Mesh(
     new THREE.SphereGeometry(0.05),
@@ -400,7 +400,7 @@ if (DEBUG) {
 
   scene.add(finger);
 
-}
+// }
 
 async function setup() {
 
@@ -973,7 +973,7 @@ function animate() {
 
     }
 
-    if (DEBUG && finger) {
+    if ( finger) {
 
       finger.position.lerp(
         targetFinger,

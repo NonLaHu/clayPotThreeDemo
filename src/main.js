@@ -9,7 +9,7 @@ import {
 } from "./hand.js";
 
 
-const DEBUG = false; // false = hide everything
+const DEBUG = true; // false = hide everything
 
 const video = document.createElement("video");
 

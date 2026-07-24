@@ -307,6 +307,7 @@ const DEBUG = false;
 ✅ Gesture guide
 ✅ Debug feature
 ❌ Measurement for the real usage
+❌ Texture Advanced
 ❌ Sound system
 ❌ Printable screenshot 
 ❌ Painting system

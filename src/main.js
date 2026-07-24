@@ -1011,7 +1011,7 @@ function animate() {
   updateClay();
 
 
-  pot.rotation.y += 0.005;
+  pot.rotation.y += 0.5;
 
 
   renderer.render(

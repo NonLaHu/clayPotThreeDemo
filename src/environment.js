@@ -12,7 +12,7 @@ export function setupEnvironment(scene) {
   
   const roomGeometry = new THREE.SphereGeometry(30, 32, 32);
   const roomMaterial = new THREE.MeshBasicMaterial({
-    color: 0x2a2018,
+    color: 0x1a1510,
     side: THREE.BackSide,
     depthWrite: false
   });
@@ -27,9 +27,9 @@ export function setupEnvironment(scene) {
   // Main workbench surface
   const workbenchGeometry = new THREE.BoxGeometry(4, 0.15, 3);
   const woodMaterial = new THREE.MeshStandardMaterial({
-    color: 0x8B5A2B,
-    roughness: 0.8,
-    metalness: 0.1
+    color: 0x7B4A2B,
+    roughness: 0.85,
+    metalness: 0.05
   });
   const workbench = new THREE.Mesh(workbenchGeometry, woodMaterial);
   workbench.position.set(0, -0.1, 0);
@@ -57,9 +57,9 @@ export function setupEnvironment(scene) {
   // =====================
   
   const shelfMaterial = new THREE.MeshStandardMaterial({
-    color: 0x6B4423,
-    roughness: 0.7,
-    metalness: 0.1
+    color: 0x5B3A1D,
+    roughness: 0.75,
+    metalness: 0.05
   });
   
   // Back shelf
@@ -69,14 +69,21 @@ export function setupEnvironment(scene) {
   backShelf.receiveShadow = true;
   scene.add(backShelf);
   
-  // Decorative pots on shelf
-  const potMaterial = new THREE.MeshStandardMaterial({
-    color: 0xCD853F,
-    roughness: 0.9,
-    metalness: 0
-  });
-  
+  // Decorative pots on shelf - randomized materials for handcrafted feel
   const createDecorativePot = (x, y, z, scale) => {
+    // Randomize pot material slightly for handmade variation
+    const hueVariation = 0.95 + Math.random() * 0.1;
+    const brightnessVariation = 0.9 + Math.random() * 0.2;
+    const baseColor = new THREE.Color(0xCD853F);
+    baseColor.multiplyScalar(brightnessVariation);
+    baseColor.offsetHSL(0, 0, (hueVariation - 1) * 0.1);
+    
+    const potMaterial = new THREE.MeshStandardMaterial({
+      color: baseColor,
+      roughness: 0.85 + Math.random() * 0.1,
+      metalness: 0
+    });
+    
     const potGeom = new THREE.LatheGeometry([
       new THREE.Vector2(0, 0),
       new THREE.Vector2(0.3 * scale, 0),
@@ -113,15 +120,23 @@ export function setupEnvironment(scene) {
   // Pottery Tools
   // =====================
   
+  // Brushed steel for tools
   const toolMaterial = new THREE.MeshStandardMaterial({
-    color: 0x808080,
-    roughness: 0.4,
-    metalness: 0.8
+    color: 0x707070,
+    roughness: 0.5,
+    metalness: 0.9
+  });
+  
+  // Darker worn wood for tool handles
+  const handleWoodMaterial = new THREE.MeshStandardMaterial({
+    color: 0x5B3A1D,
+    roughness: 0.9,
+    metalness: 0
   });
   
   // Sculpting tool
   const toolHandleGeom = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-  const toolHandle = new THREE.Mesh(toolHandleGeom, woodMaterial);
+  const toolHandle = new THREE.Mesh(toolHandleGeom, handleWoodMaterial);
   toolHandle.position.set(1.5, 0.05, 1);
   toolHandle.rotation.z = Math.PI / 4;
   scene.add(toolHandle);
@@ -142,16 +157,28 @@ export function setupEnvironment(scene) {
   // Clay Pieces
   // =====================
   
+  // Clay material with subtle variation
   const clayMaterial = new THREE.MeshStandardMaterial({
     color: 0xB56535,
-    roughness: 1.0,
+    roughness: 0.95,
     metalness: 0
   });
   
-  // Clay splatters/rocks
+  // Clay splatters/rocks with color variation
   const createClayPiece = (x, y, z, scale) => {
     const clayGeom = new THREE.DodecahedronGeometry(0.05 * scale, 0);
-    const clayPiece = new THREE.Mesh(clayGeom, clayMaterial);
+    
+    // Subtle color variation for each piece
+    const clayColor = new THREE.Color(0xB56535);
+    clayColor.offsetHSL(0, 0, (Math.random() - 0.5) * 0.1);
+    
+    const pieceMaterial = new THREE.MeshStandardMaterial({
+      color: clayColor,
+      roughness: 0.9 + Math.random() * 0.1,
+      metalness: 0
+    });
+    
+    const clayPiece = new THREE.Mesh(clayGeom, pieceMaterial);
     clayPiece.position.set(x, y, z);
     clayPiece.rotation.set(
       Math.random() * Math.PI,
@@ -170,14 +197,26 @@ export function setupEnvironment(scene) {
   createClayPiece(1.5, 0.03, -0.5, 0.7);
   createClayPiece(-1.6, 0.03, 0.3, 1.1);
   
+  // Add tiny clay crumbs for detail
+  for (let i = 0; i < 8; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 0.5 + Math.random() * 1.5;
+    createClayPiece(
+      Math.cos(angle) * radius,
+      0.02,
+      Math.sin(angle) * radius,
+      0.3 + Math.random() * 0.3
+    );
+  }
+  
   // =====================
   // Book
   // =====================
   
   const bookCoverGeom = new THREE.BoxGeometry(0.3, 0.05, 0.4);
   const bookCoverMaterial = new THREE.MeshStandardMaterial({
-    color: 0x4A3728,
-    roughness: 0.6,
+    color: 0x3A2718,
+    roughness: 0.7,
     metalness: 0
   });
   const bookCover = new THREE.Mesh(bookCoverGeom, bookCoverMaterial);
@@ -187,8 +226,8 @@ export function setupEnvironment(scene) {
   
   const bookPagesGeom = new THREE.BoxGeometry(0.28, 0.04, 0.38);
   const bookPagesMaterial = new THREE.MeshStandardMaterial({
-    color: 0xF5F5DC,
-    roughness: 0.9,
+    color: 0xE5E5CC,
+    roughness: 0.95,
     metalness: 0
   });
   const bookPages = new THREE.Mesh(bookPagesGeom, bookPagesMaterial);
@@ -201,37 +240,40 @@ export function setupEnvironment(scene) {
   // =====================
   
   // Warm ambient light (enhanced)
-  const warmAmbient = new THREE.AmbientLight(0xFFD4A6, 0.4);
+  const warmAmbient = new THREE.AmbientLight(0xFFD4A6, 0.5);
   scene.add(warmAmbient);
   
-  // Fill light from left
-  const fillLight = new THREE.DirectionalLight(0xFFE4C4, 0.5);
+  // Soft hemisphere light for natural sky lighting
+  const hemiLight = new THREE.HemisphereLight(0xFFE4C4, 0x2a2018, 0.3);
+  scene.add(hemiLight);
+  
+  // Key light from above/front (warm)
+  const keyLight = new THREE.DirectionalLight(0xFFF0E0, 0.6);
+  keyLight.position.set(2, 5, 3);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 2048;
+  keyLight.shadow.mapSize.height = 2048;
+  keyLight.shadow.camera.near = 0.5;
+  keyLight.shadow.camera.far = 50;
+  keyLight.shadow.bias = -0.0001;
+  scene.add(keyLight);
+  
+  // Fill light from left (softer)
+  const fillLight = new THREE.DirectionalLight(0xFFE4C4, 0.3);
   fillLight.position.set(-5, 3, 2);
-  fillLight.castShadow = true;
-  fillLight.shadow.mapSize.width = 1024;
-  fillLight.shadow.mapSize.height = 1024;
-  fillLight.shadow.camera.near = 0.5;
-  fillLight.shadow.camera.far = 50;
+  fillLight.castShadow = false;
   scene.add(fillLight);
   
-  // Rim light from right
-  const rimLight = new THREE.DirectionalLight(0xFFDAB9, 0.3);
+  // Weak rim light from behind (subtle)
+  const rimLight = new THREE.DirectionalLight(0xFFDAB9, 0.15);
   rimLight.position.set(5, 2, -2);
-  rimLight.castShadow = true;
-  rimLight.shadow.mapSize.width = 1024;
-  rimLight.shadow.mapSize.height = 1024;
-  rimLight.shadow.camera.near = 0.5;
-  rimLight.shadow.camera.far = 50;
+  rimLight.castShadow = false;
   scene.add(rimLight);
   
-  // Subtle top light
-  const topLight = new THREE.PointLight(0xFFF8DC, 0.4, 20);
+  // Subtle top light for ambient fill
+  const topLight = new THREE.PointLight(0xFFF8DC, 0.2, 20);
   topLight.position.set(0, 8, 0);
-  topLight.castShadow = true;
-  topLight.shadow.mapSize.width = 1024;
-  topLight.shadow.mapSize.height = 1024;
-  topLight.shadow.camera.near = 0.5;
-  topLight.shadow.camera.far = 50;
+  topLight.castShadow = false;
   scene.add(topLight);
   
   return {

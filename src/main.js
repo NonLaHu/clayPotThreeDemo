@@ -327,7 +327,7 @@ const geometry =
 
 const material = new THREE.MeshStandardMaterial({
   color: 0xb56535,
-  roughness: 1.0,
+  roughness: 0.92,
   metalness: 0,
   side: THREE.DoubleSide // This makes both the inside and outside visible
 });

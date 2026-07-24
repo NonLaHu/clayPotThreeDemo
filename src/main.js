@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import "./style.css";
 import {
+  setupEnvironment
+} from "./environment.js";
+import {
   initHand,
   detectHand
 } from "./hand.js";
@@ -90,6 +93,15 @@ async function startCamera() {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
+
+// =====================
+// Environment Setup
+// =====================
+
+const environment = setupEnvironment(scene);
+
+
+
 
 const camera = new THREE.PerspectiveCamera(
   45,
@@ -381,6 +393,12 @@ light.position.set(
   5,
   3
 );
+
+light.castShadow = true;
+light.shadow.mapSize.width = 1024;
+light.shadow.mapSize.height = 1024;
+light.shadow.camera.near = 0.5;
+light.shadow.camera.far = 50;
 
 scene.add(light);
 

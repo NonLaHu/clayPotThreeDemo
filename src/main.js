@@ -4,12 +4,29 @@ import {
   setupEnvironment
 } from "./environment.js";
 import {
+  setupPaintingEnvironment
+} from "./paintingEnvironment.js";
+import {
   initHand,
   detectHand
 } from "./hand.js";
 
 
 const DEBUG = false; // false = hide everything
+
+// =====================
+// Room State Management
+// =====================
+
+const ROOM_STATE = {
+  SCULPT_ROOM: 'sculpt_room',
+  PAINT_ROOM: 'paint_room'
+};
+
+let currentRoom = ROOM_STATE.SCULPT_ROOM;
+let sculptingEnvironmentGroup = null;
+let paintingEnvironmentGroup = null;
+let selectedColor = '#B56535'; // Default clay color
 
 const video = document.createElement("video");
 
@@ -98,7 +115,16 @@ scene.background = new THREE.Color(0x111111);
 // Environment Setup
 // =====================
 
-const environment = setupEnvironment(scene);
+// Create group for sculpting environment
+sculptingEnvironmentGroup = new THREE.Group();
+const environment = setupEnvironment(sculptingEnvironmentGroup);
+scene.add(sculptingEnvironmentGroup);
+
+// Create group for painting environment (initially hidden)
+paintingEnvironmentGroup = new THREE.Group();
+const paintingEnv = setupPaintingEnvironment(paintingEnvironmentGroup);
+paintingEnvironmentGroup.visible = false;
+scene.add(paintingEnvironmentGroup);
 
 
 
@@ -432,6 +458,137 @@ async function setup() {
 setup();
 
 // =====================
+// UI Initialization
+// =====================
+
+// Initialize Done button
+const doneButton = document.getElementById('done-button');
+const transitionOverlay = document.getElementById('transition-overlay');
+const colorSelector = document.getElementById('color-selector');
+const paintingControls = document.getElementById('painting-controls');
+
+// Create sunflower petals
+const sunflowerWheel = document.querySelector('.sunflower-wheel');
+const petalColors = [
+  0xFF4500, // Burnt Orange
+  0xDC143C, // Crimson Red
+  0xFFD700, // Mustard Yellow
+  0x808000, // Olive Green
+  0x87CEEB, // Sky Blue
+  0x008080, // Teal
+  0x4B0082, // Indigo
+  0x800080, // Purple
+  0xE6E6FA, // Lavender
+  0x4A3728, // Deep Brown
+  0x36454F, // Charcoal Grey
+  0xFFF8DC  // Cream
+];
+
+const colorHex = [
+  '#FF4500', '#DC143C', '#FFD700', '#808000',
+  '#87CEEB', '#008080', '#4B0082', '#800080',
+  '#E6E6FA', '#4A3728', '#36454F', '#FFF8DC'
+];
+
+// Enable Done button after initialization
+setTimeout(() => {
+  doneButton.classList.add('enabled');
+}, 2000);
+
+// Done button click handler
+doneButton.addEventListener('click', () => {
+  if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
+    transitionToPaintRoom();
+  }
+});
+
+// Transition function
+function transitionToPaintRoom() {
+  // Start fade
+  transitionOverlay.classList.add('active');
+  
+  // After fade completes, switch rooms
+  setTimeout(() => {
+    // Hide sculpting environment
+    sculptingEnvironmentGroup.visible = false;
+    
+    // Show painting environment
+    paintingEnvironmentGroup.visible = true;
+    
+    // Update UI
+    doneButton.style.display = 'none';
+    colorSelector.classList.add('visible');
+    paintingControls.classList.add('visible');
+    document.getElementById('painting-done-button').classList.add('visible');
+    
+    // Update state
+    currentRoom = ROOM_STATE.PAINT_ROOM;
+    
+    // Fade out
+    setTimeout(() => {
+      transitionOverlay.classList.remove('active');
+    }, 100);
+  }, 500);
+}
+
+// Painting Done button handler
+document.getElementById('painting-done-button').addEventListener('click', () => {
+  console.log('Painting complete (placeholder)');
+});
+
+// Color selection logic
+petalColors.forEach((color, index) => {
+  const petal = document.createElement('div');
+  petal.className = 'petal';
+  petal.style.backgroundColor = colorHex[index];
+  petal.dataset.color = colorHex[index];
+  
+  const angle = (index / petalColors.length) * Math.PI * 2;
+  const radius = 70; // Distance from center
+  const x = 100 + Math.cos(angle) * radius - 20; // Center offset
+  const y = 100 + Math.sin(angle) * radius - 30;
+  
+  petal.style.left = x + 'px';
+  petal.style.top = y + 'px';
+  petal.style.transform = `rotate(${angle + Math.PI/2}rad)`;
+  
+  // Color selection click handler
+  petal.addEventListener('click', () => {
+    // Remove selected class from all petals
+    document.querySelectorAll('.petal').forEach(p => p.classList.remove('selected'));
+    
+    // Add selected class to clicked petal
+    petal.classList.add('selected');
+    
+    // Update selected color
+    selectedColor = colorHex[index];
+    
+    // Update center preview
+    const sunflowerCenter = document.querySelector('.sunflower-center');
+    sunflowerCenter.style.background = `radial-gradient(circle, ${selectedColor} 0%, ${adjustColorBrightness(selectedColor, -20)} 100%)`;
+    
+    // Update color preview in controls
+    document.querySelector('.color-preview').style.background = selectedColor;
+  });
+  
+  sunflowerWheel.appendChild(petal);
+});
+
+// Helper function to adjust color brightness
+function adjustColorBrightness(hex, percent) {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const amt = Math.round(2.55 * percent);
+  const R = (num >> 16) + amt;
+  const G = (num >> 8 & 0x00FF) + amt;
+  const B = (num & 0x0000FF) + amt;
+  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+}
+
+// Initialize center color preview
+const sunflowerCenter = document.querySelector('.sunflower-center');
+sunflowerCenter.style.background = `radial-gradient(circle, ${selectedColor} 0%, #8B4513 100%)`;
+
+// =====================
 // Clay Sculpting Control
 // =====================
 
@@ -453,6 +610,10 @@ window.addEventListener(
   (e) => {
 
     if (e.ctrlKey)
+      return;
+
+    // Only enable sculpting in Sculpting Room
+    if (currentRoom !== ROOM_STATE.SCULPT_ROOM)
       return;
 
 
@@ -486,28 +647,35 @@ window.addEventListener(
       -(e.clientY / window.innerHeight) * 2 + 1;
 
 
-    raycaster.setFromCamera(
-      mouse,
-      camera
-    );
-
-
-    const hit =
-      raycaster.intersectObject(
-        pot
+    // Only do sculpting raycasting in Sculpting Room
+    if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
+      raycaster.setFromCamera(
+        mouse,
+        camera
       );
 
 
-    if (hit.length) {
-      sculptPoint =
-        hit[0].point.clone();
-    }
-    else {
-      sculptPoint = null;
+      const hit =
+        raycaster.intersectObject(
+          pot
+        );
+
+
+      if (hit.length) {
+        sculptPoint =
+          hit[0].point.clone();
+      }
+      else {
+        sculptPoint = null;
+      }
     }
 
 
     if (!dragging)
+      return;
+
+    // Only enable sculpting in Sculpting Room
+    if (currentRoom !== ROOM_STATE.SCULPT_ROOM)
       return;
 
 
@@ -1011,7 +1179,10 @@ function animate() {
   updateClay();
 
 
-  pot.rotation.y += 0.005;
+  // Only spin pottery wheel in Sculpting Room
+  if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
+    pot.rotation.y += 0.005;
+  }
 
 
   renderer.render(

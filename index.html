@@ -5,9 +5,69 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>three-demo</title>
+    <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <div id="app"></div>
+    
+    <!-- Transition Overlay -->
+    <div id="transition-overlay"></div>
+    
+    <!-- Done Button (Sculpting Room) -->
+    <button id="done-button">Done</button>
+    
+    <!-- Sunflower Color Selector (Painting Room) -->
+    <div id="color-selector">
+      <div class="sunflower-wheel">
+        <div class="sunflower-center"></div>
+        <!-- Petals will be added dynamically -->
+      </div>
+    </div>
+    
+    <!-- Painting Controls (Painting Room) -->
+    <div id="painting-controls">
+      <div class="control-section">
+        <h3>Brush Panel</h3>
+        <div class="brush-icons">
+          <div class="brush-icon">🖌️</div>
+          <div class="brush-icon">🎨</div>
+          <div class="brush-icon">✏️</div>
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h3>Brush Size</h3>
+        <div class="slider-container">
+          <input type="range" min="1" max="100" value="50" />
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h3>Opacity</h3>
+        <div class="slider-container">
+          <input type="range" min="0" max="100" value="100" />
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h3>Paint Layers</h3>
+        <div class="layer-section">
+          <div class="layer-item">
+            <div class="layer-color"></div>
+            <span class="layer-name">Base Layer</span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="control-section">
+        <h3>Color Preview</h3>
+        <div class="color-preview"></div>
+      </div>
+    </div>
+    
+    <!-- Done Button (Painting Room) -->
+    <button id="painting-done-button">Done</button>
+    
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

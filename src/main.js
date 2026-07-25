@@ -201,8 +201,18 @@ const clayPositions = geometry.attributes.position.array.slice();
 // UI Initialization (Called AFTER geometry & pot exist)
 // =====================
 
+// =====================
+// UI Initialization
+// =====================
+
 initUI({
   onReset: () => {
+    // Confirmation prompt to guard against accidental misclicks
+    const confirmed = window.confirm(
+      "Are you sure you want to reset your pottery progress?",
+    );
+    if (!confirmed) return;
+
     const pos = geometry.attributes.position;
     for (let i = 0; i < pos.count * 3; i++) {
       pos.array[i] = initialClayPositions[i];

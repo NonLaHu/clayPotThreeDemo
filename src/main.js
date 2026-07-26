@@ -1,13 +1,8 @@
 import * as THREE from "three";
 import "./style.css";
-import {
-  setupEnvironment
-} from "./environment.js";
-import {
-  initHand,
-  detectHand
-} from "./hand.js";
-
+import { setupEnvironment } from "./environment.js";
+import { initHand, detectHand } from "./hand.js";
+import { initUI, updateGestureHUD } from "./ui/ui.js";
 
 const DEBUG = true; // false = hide everything
 
@@ -24,21 +19,28 @@ if (DEBUG) {
   document.body.appendChild(video);
 }
 
-
 const HAND_CONNECTIONS = [
-
-  [0, 1], [1, 2], [2, 3], [3, 4],
-
-  [0, 5], [5, 6], [6, 7], [7, 8],
-
-  [5, 9], [9, 10], [10, 11], [11, 12],
-
-  [9, 13], [13, 14], [14, 15], [15, 16],
-
-  [13, 17], [17, 18], [18, 19], [19, 20],
-
-  [0, 17]
-
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 4],
+  [0, 5],
+  [5, 6],
+  [6, 7],
+  [7, 8],
+  [5, 9],
+  [9, 10],
+  [10, 11],
+  [11, 12],
+  [9, 13],
+  [13, 14],
+  [14, 15],
+  [15, 16],
+  [13, 17],
+  [17, 18],
+  [18, 19],
+  [19, 20],
+  [0, 17],
 ];
 
 let debugCanvas;
@@ -62,33 +64,22 @@ if (DEBUG) {
   debugCtx = debugCanvas.getContext("2d");
 }
 
-
-
 let lastPinchX = null;
 let lastHeightY = null;
 let pinchActive = false;
 let pinchStartX = 0;
 
 async function startCamera() {
-
-  const stream =
-    await navigator.mediaDevices.getUserMedia({
-      video: {
-        width: 640,
-        height: 480
-      }
-    });
-
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      width: 640,
+      height: 480,
+    },
+  });
 
   video.srcObject = stream;
-
   await video.play();
-
-
-  console.log(
-    "camera ready"
-  );
-
+  console.log("camera ready");
 }
 
 const scene = new THREE.Scene();
@@ -100,27 +91,15 @@ scene.background = new THREE.Color(0x111111);
 
 const environment = setupEnvironment(scene);
 
-
-
-
 const camera = new THREE.PerspectiveCamera(
   45,
   window.innerWidth / window.innerHeight,
   0.1,
-  100
+  100,
 );
 
-camera.position.set(
-  3,
-  2.5,
-  5
-);
-
-camera.lookAt(
-  0,
-  1,
-  0
-);
+camera.position.set(3, 2.5, 5);
+camera.lookAt(0, 1, 0);
 
 const BRUSH_HEIGHT = 0.25;
 const raycaster = new THREE.Raycaster();
@@ -137,298 +116,158 @@ const CLAY_RESISTANCE = 0.05;
 const MAX_FORCE = 0.005;
 
 const renderer = new THREE.WebGLRenderer({
-  antialias: true
+  antialias: true,
+  preserveDrawingBuffer: true,
 });
-renderer.setSize(
-  window.innerWidth,
-  window.innerHeight
-);
+renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // =====================
 // Camera Vertical Control
 // =====================
 
-let cameraDragging = false;
-let cameraLastY = 0;
-
 let cameraAngle = 0.45;
 
-// window.addEventListener(
-//   "pointerdown",
-//   (e)=>{
-
-//     if(e.ctrlKey){
-
-//       cameraDragging = true;
-//       cameraLastY = e.clientY;
-
-//     }
-
-//   }
-// );
-
-
-// window.addEventListener(
-//   "pointerup",
-//   ()=>{
-
-//     cameraDragging = false;
-
-//   }
-// );
-
-
-// window.addEventListener(
-//   "pointermove",
-//   (e)=>{
-
-//     if(!cameraDragging)
-//       return;
-
-
-//     const delta =
-//       (e.clientY - cameraLastY)
-//       * 0.005;
-
-
-//     cameraLastY = e.clientY;
-
-
-//     cameraAngle += delta;
-
-
-//     cameraAngle =
-//       THREE.MathUtils.clamp(
-//         cameraAngle,
-//         -0.2,
-//         1.2
-//       );
-
-
-//     updateCamera();
-
-//   }
-// );
-
-
 function updateCamera() {
-
   const radius = 5;
-
-
-  camera.position.y =
-    2 +
-    Math.sin(cameraAngle)
-    * radius;
-
-
-  camera.position.z =
-    Math.cos(cameraAngle)
-    * radius;
-
-
-  camera.lookAt(
-    0,
-    1,
-    0
-  );
-
+  camera.position.y = 2 + Math.sin(cameraAngle) * radius;
+  camera.position.z = Math.cos(cameraAngle) * radius;
+  camera.lookAt(0, 1, 0);
 }
 
 let targetCameraAngle = cameraAngle;
-
 
 // =====================
 // Clay Pot Geometry
 // =====================
 
 const points = [];
-
 const MAX_HEIGHT = 4;
 const INITIAL_HEIGHT = 2;
 const segments = 64;
-
 const thickness = 0.05;
-
 
 // outer wall
 for (let i = 0; i <= 40; i++) {
-
-  const y =
-    i / 40 * INITIAL_HEIGHT;
-
-
+  const y = (i / 40) * INITIAL_HEIGHT;
   let radius;
 
   if (y < 0.2) {
     radius = 0.8;
-  }
-  else if (y < 1.2) {
+  } else if (y < 1.2) {
     radius = 0.55 + y * 0.15;
-  }
-  else {
+  } else {
     radius = 0.75 - (y - 1.2) * 0.25;
   }
 
-
-  points.push(
-    new THREE.Vector2(
-      radius,
-      y
-    )
-  );
-
+  points.push(new THREE.Vector2(radius, y));
 }
 
-
-// inner wall (reverse direction)
 // inner wall
 for (let i = 40; i >= 0; i--) {
-
-  const y =
-    i / 40 * INITIAL_HEIGHT;
-
+  const y = (i / 40) * INITIAL_HEIGHT;
   let radius;
 
   if (y < 0.2) {
     radius = 0.8;
-  }
-  else if (y < 1.2) {
+  } else if (y < 1.2) {
     radius = 0.55 + y * 0.15;
-  }
-  else {
+  } else {
     radius = 0.75 - (y - 1.2) * 0.25;
   }
 
-
-  points.push(
-    new THREE.Vector2(
-      radius - thickness,
-      y
-    )
-  );
-
-
-
+  points.push(new THREE.Vector2(radius - thickness, y));
 }
-points.push(
-  new THREE.Vector2(
-    0,
-    0.08
-  )
-);
+points.push(new THREE.Vector2(0, 0.08));
 
-const geometry =
-  new THREE.LatheGeometry(
-    points,
-    segments
-  );
+const geometry = new THREE.LatheGeometry(points, segments);
 
 const material = new THREE.MeshStandardMaterial({
   color: 0xb56535,
   roughness: 0.92,
   metalness: 0,
-  side: THREE.DoubleSide // This makes both the inside and outside visible
+  side: THREE.DoubleSide,
 });
 
-const pot =
-  new THREE.Mesh(
-    geometry,
-    material
-  );
-
-
+const pot = new THREE.Mesh(geometry, material);
 scene.add(pot);
 
+// Save un-deformed initial positions for reset
+const initialClayPositions = geometry.attributes.position.array.slice();
+// Array mutated dynamically during sculpt deformation
+const clayPositions = geometry.attributes.position.array.slice();
 
-const clayPositions =
-  geometry.attributes.position.array.slice();
+// =====================
+// UI Initialization (Called AFTER geometry & pot exist)
+// =====================
 
+// =====================
+// UI Initialization
+// =====================
 
+initUI({
+  onReset: () => {
+    // Confirmation prompt to guard against accidental misclicks
+    const confirmed = window.confirm(
+      "Are you sure you want to reset your pottery progress?",
+    );
+    if (!confirmed) return;
+
+    const pos = geometry.attributes.position;
+    for (let i = 0; i < pos.count * 3; i++) {
+      pos.array[i] = initialClayPositions[i];
+      clayPositions[i] = initialClayPositions[i];
+    }
+    pos.needsUpdate = true;
+    geometry.computeVertexNormals();
+  },
+  onExport: () => {
+    renderer.render(scene, camera);
+    const image = renderer.domElement.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `clay-pot-${Date.now()}.png`;
+    link.href = image;
+    link.click();
+  },
+});
 
 // =====================
 // Ground
 // =====================
 
-const ground =
-  new THREE.Mesh(
-    new THREE.CylinderGeometry(
-      1.2,
-      1.2,
-      0.1,
-      64
-    ),
-    new THREE.MeshStandardMaterial({
-      color: 0x333333
-    })
-  );
-
+const ground = new THREE.Mesh(
+  new THREE.CylinderGeometry(1.2, 1.2, 0.1, 64),
+  new THREE.MeshStandardMaterial({ color: 0x333333 }),
+);
 ground.position.y = -0.05;
-
 scene.add(ground);
-
 
 // =====================
 // Lights
 // =====================
 
-scene.add(
-  new THREE.HemisphereLight(
-    0xffffff,
-    0x444444,
-    2
-  )
-);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
 
-
-const light =
-  new THREE.DirectionalLight(
-    0xffffff,
-    2
-  );
-
-light.position.set(
-  3,
-  5,
-  3
-);
-
+const light = new THREE.DirectionalLight(0xffffff, 2);
+light.position.set(3, 5, 3);
 light.castShadow = true;
 light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
 light.shadow.camera.near = 0.5;
 light.shadow.camera.far = 50;
-
 scene.add(light);
 
-const targetFinger =
-  new THREE.Vector3();
-
-let finger;
-
-// if (DEBUG) {
-
-finger = new THREE.Mesh(
+const targetFinger = new THREE.Vector3();
+let finger = new THREE.Mesh(
   new THREE.SphereGeometry(0.05),
-  new THREE.MeshBasicMaterial({
-    color: 0xff0000
-  })
+  new THREE.MeshBasicMaterial({ color: 0xff0000 }),
 );
-
 scene.add(finger);
 
-// }
-
 async function setup() {
-
   await startCamera();
-
   await initHand();
-
 }
-
-
 setup();
 
 // =====================
@@ -436,613 +275,272 @@ setup();
 // =====================
 
 let dragging = false;
-
 let lastX = 0;
 let lastY = 0;
 
+window.addEventListener("pointerdown", (e) => {
+  if (e.ctrlKey) return;
+  dragging = true;
+  lastX = e.clientX;
+  lastY = e.clientY;
+});
 
-// store original profile
-const clayProfile = points.map(p => ({
-  radius: p.x,
-  height: p.y
-}));
+window.addEventListener("pointerup", () => {
+  dragging = false;
+});
 
+window.addEventListener("pointermove", (e) => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
-window.addEventListener(
-  "pointerdown",
-  (e) => {
+  raycaster.setFromCamera(mouse, camera);
+  const hit = raycaster.intersectObject(pot);
 
-    if (e.ctrlKey)
-      return;
-
-
-    dragging = true;
-
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-  });
-
-
-window.addEventListener(
-  "pointerup",
-  () => {
-
-    dragging = false;
-
+  if (hit.length) {
+    sculptPoint = hit[0].point.clone();
+  } else {
+    sculptPoint = null;
   }
-);
 
+  if (!dragging) return;
 
-window.addEventListener(
-  "pointermove",
-  (e) => {
+  const dx = (e.clientX - lastX) * 0.003;
+  let dy = 0;
 
-
-    mouse.x =
-      (e.clientX / window.innerWidth) * 2 - 1;
-
-    mouse.y =
-      -(e.clientY / window.innerHeight) * 2 + 1;
-
-
-    raycaster.setFromCamera(
-      mouse,
-      camera
-    );
-
-
-    const hit =
-      raycaster.intersectObject(
-        pot
-      );
-
-
-    if (hit.length) {
-      sculptPoint =
-        hit[0].point.clone();
-    }
-    else {
-      sculptPoint = null;
-    }
-
-
-    if (!dragging)
-      return;
-
-
-
-    const dx =
-      (e.clientX - lastX) * 0.003;
-
-    let dy = 0;
-
-    if (e.shiftKey) {
-
-      dy =
-        (lastY - e.clientY)
-        * 0.005;
-
-    }
-
-
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-
-    targetRadiusChange +=
-      dx * CLAY_RESISTANCE;
-
-
-    if (e.shiftKey) {
-
-      targetHeightChange +=
-        dy * CLAY_RESISTANCE;
-
-    }
-
-
-    // limit input force
-
-    targetRadiusChange =
-      THREE.MathUtils.clamp(
-        targetRadiusChange,
-        -MAX_FORCE,
-        MAX_FORCE
-      );
-
-
-    targetHeightChange =
-      THREE.MathUtils.clamp(
-        targetHeightChange,
-        -MAX_FORCE,
-        MAX_FORCE
-      );
-
+  if (e.shiftKey) {
+    dy = (lastY - e.clientY) * 0.005;
   }
-);
 
+  lastX = e.clientX;
+  lastY = e.clientY;
+
+  targetRadiusChange += dx * CLAY_RESISTANCE;
+
+  if (e.shiftKey) {
+    targetHeightChange += dy * CLAY_RESISTANCE;
+  }
+
+  targetRadiusChange = THREE.MathUtils.clamp(
+    targetRadiusChange,
+    -MAX_FORCE,
+    MAX_FORCE,
+  );
+  targetHeightChange = THREE.MathUtils.clamp(
+    targetHeightChange,
+    -MAX_FORCE,
+    MAX_FORCE,
+  );
+});
 
 function deformClay(radiusChange, heightChange) {
+  if (!sculptPoint) return;
 
-  if (!sculptPoint)
-    return;
+  const pos = geometry.attributes.position;
 
+  for (let i = 0; i < pos.count; i++) {
+    const ox = clayPositions[i * 3];
+    const oy = clayPositions[i * 3 + 1];
+    const oz = clayPositions[i * 3 + 2];
 
-  const pos =
-    geometry.attributes.position;
+    const heightDistance = Math.abs(oy - sculptPoint.y);
+    if (heightDistance > BRUSH_HEIGHT) continue;
 
-
-  for (
-    let i = 0;
-    i < pos.count;
-    i++
-  ) {
-
-    const ox =
-      clayPositions[i * 3];
-
-    const oy =
-      clayPositions[i * 3 + 1];
-
-    const oz =
-      clayPositions[i * 3 + 2];
-
-    const heightDistance =
-      Math.abs(
-        oy - sculptPoint.y
-      );
-
-
-    if (heightDistance > BRUSH_HEIGHT)
-      continue;
-
-
-    const brushStrength =
-      1 -
-      (heightDistance / BRUSH_HEIGHT);
-
-    const normalized =
-      THREE.MathUtils.clamp(
-        oy / INITIAL_HEIGHT,
-        0,
-        1
-      );
-
-
+    const brushStrength = 1 - heightDistance / BRUSH_HEIGHT;
     const influence = 1;
 
+    const radius = Math.sqrt(ox * ox + oz * oz);
+    const angle = Math.atan2(oz, ox);
 
-    // radius
-    const radius =
-      Math.sqrt(
-        ox * ox +
-        oz * oz
-      );
-
-
-    const angle =
-      Math.atan2(
-        oz,
-        ox
-      );
-
-
-    const deformation =
-      THREE.MathUtils.clamp(
-        radiusChange *
-        influence *
-        brushStrength *
-        3,
-        -0.003,
-        0.003
-      );
-
-
-    const newRadius =
-      radius *
-      (
-        1 + deformation
-      );
-
-
-    const heightScale =
-      1 +
-      heightChange *
-      brushStrength *
-      8;
-
-
-    const newY =
-      oy *
-      heightScale;
-
-
-    pos.setX(
-      i,
-      Math.cos(angle) * newRadius
+    const deformation = THREE.MathUtils.clamp(
+      radiusChange * influence * brushStrength * 3,
+      -0.003,
+      0.003,
     );
 
+    const newRadius = radius * (1 + deformation);
+    const heightScale = 1 + heightChange * brushStrength * 8;
+    const newY = oy * heightScale;
 
-    pos.setZ(
-      i,
-      Math.sin(angle) * newRadius
-    );
-
-
-    pos.setY(
-      i,
-      THREE.MathUtils.clamp(
-        newY,
-        0,
-        MAX_HEIGHT
-      )
-    );
-
+    pos.setX(i, Math.cos(angle) * newRadius);
+    pos.setZ(i, Math.sin(angle) * newRadius);
+    pos.setY(i, THREE.MathUtils.clamp(newY, 0, MAX_HEIGHT));
   }
-
 
   pos.needsUpdate = true;
 
-  for (
-    let i = 0;
-    i < pos.count * 3;
-    i++
-  ) {
-    clayPositions[i] =
-      pos.array[i];
+  for (let i = 0; i < pos.count * 3; i++) {
+    clayPositions[i] = pos.array[i];
   }
 
   geometry.computeVertexNormals();
-
 }
 
 function isOpenPalm(hand) {
-
   return (
-    hand[8].y < hand[6].y && // index
-    hand[12].y < hand[10].y && // middle
-    hand[16].y < hand[14].y && // ring
-    hand[20].y < hand[18].y    // pinky
+    hand[8].y < hand[6].y &&
+    hand[12].y < hand[10].y &&
+    hand[16].y < hand[14].y &&
+    hand[20].y < hand[18].y
   );
-
 }
 
-// =====================
-// Animation
-// =====================
-
 function updateClay() {
-
-  deformClay(
-    targetRadiusChange,
-    targetHeightChange
-  );
-
-
-  // consume input
+  deformClay(targetRadiusChange, targetHeightChange);
   targetRadiusChange = 0;
   targetHeightChange = 0;
-
 }
 
 function isHeightGesture(hand) {
+  const indexOpen = hand[8].y < hand[6].y;
+  const middleOpen = hand[12].y < hand[10].y;
+  const ringClosed = hand[16].y > hand[14].y;
+  const pinkyClosed = hand[20].y > hand[18].y;
 
-  const indexOpen =
-    hand[8].y < hand[6].y;
-
-  const middleOpen =
-    hand[12].y < hand[10].y;
-
-  const ringClosed =
-    hand[16].y > hand[14].y;
-
-  const pinkyClosed =
-    hand[20].y > hand[18].y;
-
-
-  return (
-    indexOpen &&
-    middleOpen &&
-    ringClosed &&
-    pinkyClosed
-  );
+  return indexOpen && middleOpen && ringClosed && pinkyClosed;
 }
 
 function getPinchStrength(hand) {
-
-  const thumb =
-    new THREE.Vector3(
-      hand[4].x,
-      hand[4].y,
-      hand[4].z
-    );
-
-
-  const index =
-    new THREE.Vector3(
-      hand[8].x,
-      hand[8].y,
-      hand[8].z
-    );
-
-
-  const distance =
-    thumb.distanceTo(index);
+  const thumb = new THREE.Vector3(hand[4].x, hand[4].y, hand[4].z);
+  const index = new THREE.Vector3(hand[8].x, hand[8].y, hand[8].z);
+  const distance = thumb.distanceTo(index);
 
   return THREE.MathUtils.clamp(
-    THREE.MathUtils.mapLinear(
-      distance,
-      0.02,
-      0.15,
-      1,
-      0
-    ),
+    THREE.MathUtils.mapLinear(distance, 0.02, 0.15, 1, 0),
     0,
-    1
+    1,
   );
-
 }
 
-
 function animate() {
-
-  requestAnimationFrame(
-    animate
-  );
-  const hand = detectHand(
-    video,
-    performance.now()
-  );
-
+  requestAnimationFrame(animate);
+  const hand = detectHand(video, performance.now());
 
   if (hand) {
+    const index = hand[8];
+    const pinch = getPinchStrength(hand);
 
-    const index =
-      hand[8];
-    const pinch =
-      getPinchStrength(hand);
-
-    if (DEBUG) {
-
-
-      debugCtx.clearRect(
-        0,
-        0,
-        debugCanvas.width,
-        debugCanvas.height
-      );
-
+    if (DEBUG && debugCtx) {
+      debugCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
       debugCtx.strokeStyle = "lime";
       debugCtx.fillStyle = "red";
       debugCtx.lineWidth = 2;
 
       for (const p of hand) {
-
         const x = (1 - p.x) * debugCanvas.width;
         const y = p.y * debugCanvas.height;
-
         debugCtx.beginPath();
-        debugCtx.arc(
-          x,
-          y,
-          4,
-          0,
-          Math.PI * 2
-        );
+        debugCtx.arc(x, y, 4, 0, Math.PI * 2);
         debugCtx.fill();
-
       }
 
       debugCtx.strokeStyle = "cyan";
-
       for (const [a, b] of HAND_CONNECTIONS) {
-
         debugCtx.beginPath();
-
         debugCtx.moveTo(
           (1 - hand[a].x) * debugCanvas.width,
-          hand[a].y * debugCanvas.height
+          hand[a].y * debugCanvas.height,
         );
-
         debugCtx.lineTo(
           (1 - hand[b].x) * debugCanvas.width,
-          hand[b].y * debugCanvas.height
+          hand[b].y * debugCanvas.height,
         );
-
         debugCtx.stroke();
-
       }
     }
 
+    // 1. Pinch Gesture (Radius Control)
     if (pinch > 0.5) {
+      updateGestureHUD("Adjusting Radius", "minimize-2");
       lastHeightY = null;
-      if (!pinchActive) {
 
+      if (!pinchActive) {
         pinchActive = true;
         pinchStartX = index.x;
-
       }
 
-
-      const movement =
-        index.x - pinchStartX;
-
-
-      targetRadiusChange =
-        movement *
-        pinch *
-        CLAY_RESISTANCE;
-
-
-    }
-    else {
-
+      const movement = index.x - pinchStartX;
+      targetRadiusChange = movement * pinch * CLAY_RESISTANCE;
+    } else {
       pinchActive = false;
-
     }
 
+    // 2. Height Stretch Gesture (Victory Sign)
     if (isHeightGesture(hand)) {
-
-
-      const middle =
-        hand[12];
-
-
-      if (lastHeightY !== null) {
-
-        const movement =
-          lastHeightY - middle.y;
-
-
-        targetHeightChange +=
-          movement *
-          CLAY_RESISTANCE;
-
-
-        targetHeightChange =
-          THREE.MathUtils.clamp(
-            targetHeightChange,
-            -MAX_FORCE,
-            MAX_FORCE
-          );
-
+      if (pinch <= 0.5) {
+        updateGestureHUD("Stretching Height", "maximize-2");
       }
 
-
+      const middle = hand[12];
+      if (lastHeightY !== null) {
+        const movement = lastHeightY - middle.y;
+        targetHeightChange += movement * CLAY_RESISTANCE;
+        targetHeightChange = THREE.MathUtils.clamp(
+          targetHeightChange,
+          -MAX_FORCE,
+          MAX_FORCE,
+        );
+      }
       lastHeightY = middle.y;
-
-
-    }
-    else {
-
+    } else {
       lastHeightY = null;
-
     }
 
+    // 3. Open Palm (Camera Control)
     if (isOpenPalm(hand)) {
+      if (pinch <= 0.5 && !isHeightGesture(hand)) {
+        updateGestureHUD("Rotating Camera", "hand");
+      }
 
       const palmY =
-        (
-          hand[0].y +
-          hand[5].y +
-          hand[9].y +
-          hand[13].y +
-          hand[17].y
-        ) / 5;
-
-
-      targetCameraAngle =
-        THREE.MathUtils.mapLinear(
-          palmY,
-          0.2,
-          0.8,
-          -0.2,
-          1.2
-        );
-
+        (hand[0].y + hand[5].y + hand[9].y + hand[13].y + hand[17].y) / 5;
+      targetCameraAngle = THREE.MathUtils.mapLinear(palmY, 0.2, 0.8, -0.2, 1.2);
     }
 
+    // 4. Pointing Finger (Sculpting active)
+    if (pinch <= 0.5 && !isHeightGesture(hand) && !isOpenPalm(hand)) {
+      updateGestureHUD("Sculpting Point Active", "target");
+    }
 
-    mouse.x =
-      1 - index.x * 2;
+    mouse.x = 1 - index.x * 2;
+    mouse.y = 1 - index.y * 2;
 
-    mouse.y =
-      1 - index.y * 2;
-
-    raycaster.setFromCamera(
-      mouse,
-      camera
-    );
-
-    const hit =
-      raycaster.intersectObject(
-        pot
-      );
+    raycaster.setFromCamera(mouse, camera);
+    const hit = raycaster.intersectObject(pot);
 
     if (hit.length) {
+      sculptPoint = hit[0].point.clone();
+      const normal = hit[0].face.normal.clone();
+      normal.transformDirection(pot.matrixWorld);
 
-      sculptPoint =
-        hit[0].point.clone();
-
-
-      const normal =
-        hit[0].face.normal.clone();
-
-      normal.transformDirection(
-        pot.matrixWorld
-      );
-
-
-      targetFinger.copy(
-        hit[0].point
-      );
-
-
-      targetFinger.addScaledVector(
-        normal,
-        0.03
-      );
-
-    }
-    else {
-
+      targetFinger.copy(hit[0].point);
+      targetFinger.addScaledVector(normal, 0.03);
+    } else {
       sculptPoint = null;
-
     }
 
     if (finger) {
-
-      finger.position.lerp(
-        targetFinger,
-        0.2
-      );
-
+      finger.position.lerp(targetFinger, 0.2);
     }
-
+  } else {
+    updateGestureHUD("Waiting for hand gesture...", "activity");
   }
 
-  cameraAngle +=
-    (targetCameraAngle - cameraAngle)
-    * 0.1;
-
+  cameraAngle += (targetCameraAngle - cameraAngle) * 0.1;
   updateCamera();
-
   updateClay();
 
-
   pot.rotation.y += 0.5;
-
-
-  renderer.render(
-    scene,
-    camera
-  );
-
+  renderer.render(scene, camera);
 }
 
-
 animate();
-
 
 // =====================
 // Resize
 // =====================
 
-window.addEventListener(
-  "resize",
-  () => {
-
-    camera.aspect =
-      window.innerWidth /
-      window.innerHeight;
-
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(
-      window.innerWidth,
-      window.innerHeight
-    );
-
-  }
-);
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});

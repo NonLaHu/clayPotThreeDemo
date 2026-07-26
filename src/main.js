@@ -4,7 +4,7 @@ import "./style.css";
 import { setupEnvironment } from "./environment.js";
 import { initHand, detectHand } from "./hand.js";
 import { initUI, updateGestureHUD } from "./UI/ui.js";
-
+import { initSound, resumeSound, setSoundEnabled, updateWheelSound, updateSculptSound, stopSculptSound} from "./sound.js";
 const DEBUG = true;
 
 // =====================
@@ -271,7 +271,7 @@ const pot = new THREE.Mesh(
 );
 
 scene.add(pot);
-
+initSound();
 // =====================
 // Clay State
 // =====================
@@ -334,6 +334,26 @@ initUI({
     link.href = image;
 
     link.click();
+  },
+
+  onSoundToggle: async (enabled) => {
+    if (!enabled) {
+      // Explicitly disable
+      setSoundEnabled(false);
+      return;
+    }
+
+    // Explicitly enable
+    const state =
+      await resumeSound();
+
+    if (state !== "running") {
+      throw new Error(
+        "Audio could not be started.",
+      );
+    }
+
+    setSoundEnabled(true);
   },
 });
 
@@ -410,7 +430,7 @@ const finger = new THREE.Mesh(
 scene.add(finger);
 
 // =====================
-// Hand Setup
+// Hand & Sound Setup
 // =====================
 
 async function setup() {
@@ -418,10 +438,12 @@ async function setup() {
     await startCamera();
     await initHand();
 
-    console.log("hand tracking ready");
+    console.log(
+      "hand tracking + sound ready",
+    );
   } catch (error) {
     console.error(
-      "Failed to initialize camera/hand tracking:",
+      "Setup failed:",
       error,
     );
 
@@ -431,7 +453,6 @@ async function setup() {
     );
   }
 }
-
 setup();
 
 // =====================
@@ -850,7 +871,7 @@ function updateHandInput(hand) {
   ) {
     updateGestureHUD(
       "Rotating Camera",
-      "hand",
+      "edit-3",
     );
 
     const palmY =
@@ -936,27 +957,43 @@ function updateHandInput(hand) {
 // =====================
 
 function updateClay() {
+  const radiusInput =
+    Math.abs(targetRadiusChange);
+
+  const heightInput =
+    Math.abs(targetHeightChange);
+
+  const inputStrength =
+    THREE.MathUtils.clamp(
+      (radiusInput + heightInput) /
+        (MAX_FORCE * 2),
+      0,
+      1,
+    );
+
   if (
-    Math.abs(targetRadiusChange) >
-      0 ||
-    Math.abs(targetHeightChange) >
-      0
+    radiusInput > 0 ||
+    heightInput > 0
   ) {
     deformClay(
       targetRadiusChange,
       targetHeightChange,
     );
+
+    updateSculptSound(
+      inputStrength,
+    );
+  } else {
+    stopSculptSound();
   }
 
   // Consume input
   targetRadiusChange = 0;
   targetHeightChange = 0;
 }
-
 // =====================
 // Animation
 // =====================
-
 function animate() {
   requestAnimationFrame(animate);
 
@@ -967,7 +1004,10 @@ function animate() {
     );
 
   if (hand) {
-    // Draw debug hand
+    // =====================
+    // Debug Hand
+    // =====================
+
     if (
       DEBUG &&
       debugCtx
@@ -1040,9 +1080,16 @@ function animate() {
       }
     }
 
+    // =====================
+    // Process Hand ONCE
+    // =====================
+
     updateHandInput(hand);
 
-    // Smooth finger indicator
+    // =====================
+    // Finger Indicator
+    // =====================
+
     finger.position.lerp(
       targetFinger,
       0.2,
@@ -1055,9 +1102,14 @@ function animate() {
       "Waiting for hand gesture...",
       "activity",
     );
+
+    stopSculptSound();
   }
 
-  // Smooth camera
+  // =====================
+  // Camera
+  // =====================
+
   cameraAngle +=
     (
       targetCameraAngle -
@@ -1066,11 +1118,35 @@ function animate() {
 
   updateCamera();
 
-  // Apply clay deformation
+  // =====================
+  // Clay
+  // =====================
+
   updateClay();
 
-  // Rotate pot
-  pot.rotation.y += 0.5;
+const time =
+  performance.now() * 0.001;
+
+const WHEEL_BASE_SPEED = 0.5;
+
+const WHEEL_WAVE =
+  Math.sin(time * 0.7) * 0.08;
+
+const WHEEL_SPEED =
+  WHEEL_BASE_SPEED +
+  WHEEL_WAVE ;
+
+pot.rotation.y +=
+  WHEEL_SPEED;
+
+updateWheelSound(
+  WHEEL_SPEED /
+    WHEEL_BASE_SPEED,
+);
+
+  // =====================
+  // Render
+  // =====================
 
   renderer.render(
     scene,

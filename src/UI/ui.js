@@ -2,7 +2,7 @@ import "./ui.css";
 
 let currentIcon = "activity";
 
-export function initUI({ onReset, onExport }) {
+export function initUI({ onReset, onExport, onSoundToggle }) {
   if (document.getElementById("ui-overlay")) return;
 
   const overlay = document.createElement("div");
@@ -48,7 +48,7 @@ export function initUI({ onReset, onExport }) {
             </div>
           </div>
           <div class="gesture-item">
-            <i data-feather="hand"></i>
+            <i data-feather="edit-3"></i>
             <div>
               <strong>Open Palm</strong>
               <span>Tilt & rotate camera view</span>
@@ -60,10 +60,15 @@ export function initUI({ onReset, onExport }) {
 
     <!-- Top-Right Area: Action Buttons -->
     <div class="hud-controls">
+      <button id="btn-sound" class="hud-btn icon-only" title="Enable sound">
+        <i     id="sound-icon" data-feather="volume-x"></i>
+      </button>
+
       <button id="btn-reset" class="hud-btn">
         <i data-feather="rotate-ccw"></i>
         <span>Reset Pot</span>
       </button>
+
       <button id="btn-export" class="hud-btn primary">
         <i data-feather="download"></i>
         <span>Export PNG</span>
@@ -96,6 +101,74 @@ export function initUI({ onReset, onExport }) {
     menu.classList.remove("open");
     menuBtn.classList.remove("active");
   });
+  const soundButton =
+  document.getElementById("btn-sound");
+
+let soundEnabled = false;
+
+function updateSoundIcon() {
+  const iconName =
+    soundEnabled
+      ? "volume-2"
+      : "volume-x";
+
+  soundButton.innerHTML = `
+    <i
+      id="sound-icon"
+      data-feather="${iconName}"
+    ></i>
+  `;
+
+  soundButton.title =
+    soundEnabled
+      ? "Disable sound"
+      : "Enable sound";
+
+  if (window.feather) {
+    window.feather.replace();
+  }
+}
+
+soundButton.addEventListener(
+  "click",
+  async () => {
+    const nextState =
+      !soundEnabled;
+
+    console.log(
+      "Sound toggle:",
+      nextState
+        ? "ON"
+        : "OFF",
+    );
+
+    try {
+      await onSoundToggle(
+        nextState,
+      );
+
+      soundEnabled = nextState;
+
+      updateSoundIcon();
+
+      console.log(
+        "Sound state:",
+        soundEnabled
+          ? "ON"
+          : "OFF",
+      );
+    } catch (error) {
+      console.error(
+        "Sound toggle failed:",
+        error,
+      );
+
+      soundEnabled = false;
+
+      updateSoundIcon();
+    }
+  },
+);
 }
 
 export function updateGestureHUD(message, iconName = "activity") {

@@ -190,3 +190,15 @@
   background: #c8723d;
   box-shadow: 0 6px 20px rgba(181, 101, 53, 0.4);
 }
+
+.icon-only {
+  width: 42px;
+  min-width: 42px;
+  padding: 0;
+  justify-content: center;
+}
+
+.icon-only svg {
+  width: 18px;
+  height: 18px;
+}

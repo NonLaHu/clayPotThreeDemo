@@ -1,13 +1,20 @@
+# 🏺 Hand Gesture Clay Sculpting
 
-# 🏺 Hand Gesture Clay Sculpting (Three.js + MediaPipe)
+### Three.js + MediaPipe Hand Tracking
 
-A real-time 3D clay sculpting experiment using **Three.js** and **MediaPipe Hand Tracking**.
+A real-time 3D clay sculpting experiment built with **Three.js**, **MediaPipe Hand Tracking**, and **WebGL**.
 
-The project allows users to sculpt a virtual clay pot using hand gestures:
-- Move finger → control sculpting point
-- Pinch gesture → change clay radius
-- Open palm → rotate camera
-- Special finger gesture → stretch/compress clay height
+The project lets users interact with a virtual clay pot using hand gestures. The system also supports mouse-based sculpting as a fallback.
+
+### Main interactions
+
+* ☝️ Pointing finger → control sculpting position
+* 👌 Pinch → adjust clay radius
+* ✌️ Two-finger gesture → stretch/compress clay height
+* 🖐️ Open palm → rotate camera
+* 🖱️ Mouse drag → manual sculpting
+* 🔄 Reset → restore the original clay shape
+* 📸 Export → save the current pot as a PNG screenshot
 
 ---
 
@@ -15,9 +22,13 @@ The project allows users to sculpt a virtual clay pot using hand gestures:
 
 ## Requirements
 
-- Node.js
-- Webcam
-- Modern browser (Chrome/Firefox recommended)
+* Node.js
+* Webcam
+* Modern browser
+* Browser camera permissions
+* WebGL support
+
+Chrome and Firefox are recommended.
 
 ---
 
@@ -37,176 +48,258 @@ npm run dev
 
 Open:
 
-```
+```text
 http://localhost:5173
 ```
 
-Allow camera permission when requested.
+Allow webcam permission when requested.
 
 ---
 
 # 📂 Project Structure
 
-```
+```text
 src/
 │
-├── main.js          # Three.js scene + gesture controls
-├── hand.js          # MediaPipe initialization and detection
-├── environment.js   # Environment view
-├── style.css
+├── main.js              # Three.js scene, clay system, gestures, animation
+├── hand.js              # MediaPipe hand initialization and detection
+├── environment.js       # 3D environment setup
+├── style.css            # Global styling
 │
-└── assets/
+├── ui/
+│   └── ui.js            # UI controls and gesture status HUD
+│
+└── assets/              # Project assets
 ```
-
 
 ---
 
 # ✋ Hand Gesture Controls
 
-## 1. Index Finger Sculpt Tool
+## 1. ☝️ Index Finger — Sculpt Position
 
 ### Gesture
 
-Point with index finger:
+Point with the index finger:
 
-```
+```text
 ☝️
 ```
 
-The fingertip becomes the sculpting tool.
+The index fingertip is tracked by MediaPipe and projected into the 3D scene using a raycaster.
 
-Movement controls:
-
-```
-Move finger around clay
+```text
+Move index finger
         ↓
-Move sculpt position
+Raycast into clay
+        ↓
+Update sculpting position
 ```
 
-The red sphere shows the detected fingertip position.
+The red sphere represents the 3D finger/tool indicator.
+
+The sculpting brush affects vertices around the detected point.
 
 ---
 
-# 2. Pinch Gesture - Clay Radius
+# 2. 👌 Pinch — Clay Radius
 
 ### Gesture
 
-Pinch:
+Bring the thumb and index finger together:
 
-```
+```text
 👌
 ```
 
-Thumb + index finger close together.
+The system calculates the distance between:
 
-Action:
-
-```
-Move hand left/right
-        ↓
-Expand or shrink clay radius
+```text
+Thumb tip  → Landmark 4
+Index tip  → Landmark 8
 ```
 
-Example:
+When the pinch strength exceeds the activation threshold:
 
+```text
+Pinch
+  ↓
+Move index finger horizontally
+  ↓
+Change clay radius
 ```
+
+### Direction
+
+```text
 Move right
     ↓
 Increase radius
+
 
 Move left
     ↓
 Decrease radius
 ```
 
----
-
-# 3. Open Palm - Camera Rotation
-
-### Gesture
-
-Open hand:
-
-```
-🖐️
-```
-
-All fingers extended.
-
-Action:
-
-Move palm vertically:
-
-```
-Move hand up
-        ↓
-Camera rotates upward
-
-
-Move hand down
-        ↓
-Camera rotates downward
-```
+The radius deformation is smoothed through the clay resistance and force limits.
 
 ---
 
-# 4. Height Stretch Gesture
+# 3. ✌️ Two-Finger Gesture — Height Control
 
 ### Gesture
 
-Two fingers open:
+Extend the index and middle fingers while keeping the ring and pinky fingers closed:
 
-```
+```text
 ✌️
 ```
 
-Index + middle finger open.
+Detected configuration:
 
-Ring + pinky closed.
+```text
+Index   → Open
+Middle  → Open
+Ring    → Closed
+Pinky   → Closed
+```
 
 Action:
 
-Move hand vertically:
-
-```
+```text
 Move hand upward
         ↓
-Stretch clay height
+Stretch clay
 
 
 Move hand downward
         ↓
-Compress clay height
+Compress clay
+```
+
+The middle finger's vertical movement is used to calculate the height deformation.
+
+The clay height is constrained between:
+
+```text
+0
+↓
+4 units
 ```
 
 ---
 
-# Gesture Priority
+# 4. 🖐️ Open Palm — Camera Control
 
-To prevent conflicts:
+### Gesture
 
-```
-Open Palm
-    |
-    └── Camera control
+Open your hand:
 
-
-Pinch
-    |
-    └── Radius sculpting
-
-
-Peace gesture
-    |
-    └── Height control
-
-
-Index finger
-    |
-    └── Sculpt position
+```text
+🖐️
 ```
 
-Only one major action should activate at a time.
+All four fingers must be extended.
+
+The system calculates the average vertical position of:
+
+```text
+Wrist
+Index base
+Middle base
+Ring base
+Pinky base
+```
+
+Then maps that position to the camera angle.
+
+```text
+Move palm upward
+        ↓
+Camera moves upward
+
+
+Move palm downward
+        ↓
+Camera moves downward
+```
+
+Camera movement is smoothed to prevent abrupt movement.
+
+---
+
+# 5. 🖱️ Mouse Sculpting
+
+Hand tracking is not required for basic mouse interaction.
+
+Drag the mouse across the clay:
+
+```text
+Mouse drag
+    ↓
+Horizontal movement
+    ↓
+Radius deformation
+```
+
+Hold:
+
+```text
+SHIFT
+```
+
+while dragging to control vertical deformation:
+
+```text
+SHIFT + drag
+      ↓
+Height deformation
+```
+
+This provides a fallback interaction method when hand tracking is unavailable.
+
+---
+
+# 🎛️ Gesture Priority
+
+The gesture system uses a priority order to prevent multiple controls from fighting each other.
+
+```text
+1. Pinch
+      ↓
+   Radius control
+
+2. Two-finger gesture
+      ↓
+   Height control
+
+3. Open palm
+      ↓
+   Camera control
+
+4. Pointing gesture
+      ↓
+   Sculpting position
+
+5. Unknown gesture
+      ↓
+   No dedicated gesture action
+```
+
+The system therefore prioritizes:
+
+```text
+PINCH
+  >
+HEIGHT
+  >
+OPEN PALM
+  >
+POINTING
+```
+
+For example, an open palm will not activate camera control while the pinch gesture is active.
 
 ---
 
@@ -214,20 +307,20 @@ Only one major action should activate at a time.
 
 ## Hand Tracking
 
-Powered by:
+Hand tracking is handled by:
 
-- MediaPipe Tasks Vision
-- Hand Landmark Model
+* MediaPipe Tasks Vision
+* MediaPipe Hand Landmark Model
 
-The model detects:
+The system receives:
 
-```
+```text
 21 hand landmarks
 ```
 
 Important landmarks:
 
-```
+```text
 0  = Wrist
 
 4  = Thumb tip
@@ -241,83 +334,294 @@ Important landmarks:
 20 = Pinky tip
 ```
 
+The landmarks are used for:
+
+* Gesture recognition
+* Finger positioning
+* Pinch detection
+* Camera control
+* Clay interaction
+
 ---
 
-# Clay System
+# 🏺 Clay System
 
-The clay object uses:
+The clay pot is generated using:
 
-```
+```javascript
 THREE.LatheGeometry
 ```
 
-A 2D profile is rotated around the Y-axis:
+A 2D radial profile is created first:
 
-```
-Profile points
-        |
-        ↓
+```text
+2D profile
+    ↓
 LatheGeometry
-        |
-        ↓
-3D clay pot
+    ↓
+3D rotational mesh
+    ↓
+Clay pot
 ```
 
-Vertex positions are modified directly:
+The geometry contains:
 
+```text
+Outer wall
+Inner wall
+Base
 ```
-vertex position
-        |
-        ↓
-radius deformation
-        |
-        ↓
-height deformation
+
+The clay is dynamically deformed by modifying the geometry's vertex positions directly.
+
+---
+
+## Radius Deformation
+
+For each vertex:
+
+```text
+Current vertex
+      ↓
+Calculate radius
+      ↓
+Apply deformation
+      ↓
+Update X/Z position
+```
+
+The deformation is influenced by the vertical distance from the sculpting point.
+
+---
+
+## Height Deformation
+
+Height changes modify the Y coordinate:
+
+```text
+Current Y
+   ↓
+Height scale
+   ↓
+Clamp to MAX_HEIGHT
+   ↓
+New Y
+```
+
+The current maximum height is:
+
+```javascript
+const MAX_HEIGHT = 4;
 ```
 
 ---
 
-# Debug Mode
+## Vertex Normals
 
-Debug helpers:
+After deformation:
 
-- Camera video preview
-- Finger mesh
+```javascript
+geometry.computeVertexNormals();
+```
 
-should only appear when:
+is called to keep the clay lighting and surface shading updated.
+
+---
+
+# 🔄 Reset System
+
+The original clay vertex positions are stored when the geometry is created.
+
+```javascript
+const initialClayPositions =
+  geometry.attributes.position.array.slice();
+```
+
+When Reset is selected:
+
+```text
+Current clay
+     ↓
+Restore original vertices
+     ↓
+Recalculate normals
+     ↓
+Original clay shape
+```
+
+A confirmation dialog is displayed before resetting.
+
+---
+
+# 📸 Export System
+
+The current 3D scene can be exported as a PNG image.
+
+The renderer uses:
+
+```javascript
+preserveDrawingBuffer: true
+```
+
+The export process is:
+
+```text
+Current scene
+     ↓
+Render
+     ↓
+Canvas
+     ↓
+PNG
+     ↓
+Download
+```
+
+The generated file uses the format:
+
+```text
+clay-pot-TIMESTAMP.png
+```
+
+---
+
+# 🖥️ Gesture HUD
+
+The UI displays the current interaction state.
+
+Examples:
+
+```text
+Adjusting Radius
+Stretching Height
+Rotating Camera
+Sculpting Point Active
+Waiting for hand gesture...
+```
+
+The HUD provides immediate feedback about which gesture the application is currently detecting.
+
+---
+
+# 🐞 Debug Mode
+
+Debug mode is controlled by:
 
 ```javascript
 const DEBUG = true;
 ```
 
-Disable:
+When enabled, the application displays the webcam feed and a hand landmark debug canvas.
+
+The debug visualization shows:
+
+```text
+21 hand landmarks
+        +
+Hand connections
+```
+
+To disable the camera/debug visualization:
 
 ```javascript
 const DEBUG = false;
 ```
 
----
-
-# Current Features
-
-✅ Three.js 3D clay pot    
-✅ Real time finger control  
-✅ Open palm camera control       
-✅ Environment 3D
-✅ Gesture guide
-✅ Debug feature
-❌ Measurement for the real usage
-❌ Texture Advanced
-❌ Sound system
-❌ Printable screenshot 
-❌ Painting system
+The gesture tracking system itself can still operate when debug visualization is disabled.
 
 ---
-# Credits
+
+# 🌎 Environment
+
+The 3D environment is initialized through:
+
+```javascript
+setupEnvironment(scene);
+```
+
+The environment is separated into:
+
+```text
+environment.js
+```
+
+so that scene/environment configuration does not need to be mixed with the clay interaction system.
+
+---
+
+# 🛠️ Current Features
+
+### Implemented
+
+* ✅ Three.js 3D clay pot
+* ✅ Real-time MediaPipe hand tracking
+* ✅ 21-point hand landmark detection
+* ✅ Index finger sculpt positioning
+* ✅ Pinch radius control
+* ✅ Two-finger height control
+* ✅ Open palm camera control
+* ✅ Mouse sculpting fallback
+* ✅ Shift + mouse height control
+* ✅ Gesture priority system
+* ✅ Gesture status HUD
+* ✅ 3D finger/tool indicator
+* ✅ Dynamic clay vertex deformation
+* ✅ Dynamic vertex normals
+* ✅ Clay reset system
+* ✅ PNG screenshot export
+* ✅ 3D environment
+* ✅ Debug hand visualization
+* ✅ Responsive renderer resizing
+
+### Planned / Not Yet Implemented
+
+* ❌ Real-world measurement system
+* ❌ Advanced clay textures
+* ❌ Sound system
+* ❌ Painting/coloring system
+* ❌ Advanced sculpting brushes
+* ❌ More advanced gesture recognition
+* ❌ Persistent clay/project saving
+
+---
+
+# 🧱 Technology Stack
+
+```text
+Frontend
+    ↓
+JavaScript
+    ↓
+Three.js
+    ↓
+WebGL
+    ↓
+MediaPipe Tasks Vision
+    ↓
+Webcam Hand Tracking
+```
+
+### Main technologies
+
+* **Three.js** — 3D rendering and geometry
+* **MediaPipe Tasks Vision** — hand tracking
+* **WebGL** — GPU-accelerated rendering
+* **Vite** — development server and build tooling
+* **JavaScript** — application logic
+
+---
+
+# 📦 Credits
 
 Built with:
 
-- Three.js
-- MediaPipe Tasks Vision
-- WebGL
-- Vite
+* Three.js
+* MediaPipe Tasks Vision
+* WebGL
+* Vite
+
+---
+
+# 📄 License
+
+Add your project license here if applicable.

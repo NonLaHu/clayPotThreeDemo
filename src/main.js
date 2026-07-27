@@ -128,7 +128,7 @@ let pinchStartX = 0;
 // PAINTING STATE
 // ============================================================
 
-const PAINT_RING_WIDTH = 4;
+const PAINT_RING_WIDTH = 2;
 
 let lastPaintY = null;
 let paintingActive = false;
@@ -218,6 +218,8 @@ camera.lookAt(
   1,
   0,
 );
+
+
 
 // ============================================================
 // SCULPT SETTINGS
@@ -629,6 +631,42 @@ ground.position.y =
   -0.05;
 
 scene.add(ground);
+// ============================================================
+// PAINTING HIGHLIGHT
+// ============================================================
+
+const PAINT_RADIUS = 0.18;
+
+const paintHighlightGeometry =
+  new THREE.CylinderGeometry(
+    0.76,                  // around the pot
+    0.76,
+    PAINT_RADIUS * 2,      // vertical paint band
+    64,
+    1,
+    true,
+  );
+
+const paintHighlightMaterial =
+  new THREE.MeshBasicMaterial({
+    color: 0xffff00,
+    transparent: true,
+    opacity: 0.20,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  });
+
+const paintHighlight =
+  new THREE.Mesh(
+    paintHighlightGeometry,
+    paintHighlightMaterial,
+  );
+
+paintHighlight.visible = false;
+
+scene.add(
+  paintHighlight,
+);
 
 // ============================================================
 // LIGHTS
@@ -1337,7 +1375,7 @@ function getPinchStrength(
 // ============================================================
 
 function paintHorizontalRing(
-  handY,
+  centerY,
 ) {
   if (
     currentRoom !==
@@ -1354,22 +1392,12 @@ function paintHorizontalRing(
 
   // Convert hand Y from MediaPipe
   // into clay height.
-
-  const clayY =
-    THREE.MathUtils.mapLinear(
-      handY,
-      0.8,
-      0.2,
-      0,
-      INITIAL_HEIGHT,
-    );
-
-  const clampedY =
-    THREE.MathUtils.clamp(
-      clayY,
-      0,
-      INITIAL_HEIGHT,
-    );
+const clampedY =
+  THREE.MathUtils.clamp(
+    centerY,
+    0,
+    INITIAL_HEIGHT,
+  );
 
   // ----------------------------------------------------------
   // Paint approximately 4 horizontal vertex rows
@@ -1439,14 +1467,67 @@ function paintHorizontalRing(
   colors.needsUpdate = true;
 }
 
-// ============================================================
-// PAINTING HAND INPUT
-// ============================================================
+function updatePaintHighlight(y) {
+  const clampedY =
+    THREE.MathUtils.clamp(
+      y,
+      0.1,
+      INITIAL_HEIGHT - 0.1,
+    );
+
+  paintHighlight.position.set(
+    0,
+    clampedY,
+    0,
+  );
+}
+
+
+function paintHorizontalBand(centerY) {
+  const pos =
+    geometry.attributes.position;
+
+  for (
+    let i = 0;
+    i < pos.count;
+    i++
+  ) {
+    const y =
+      pos.getY(i);
+
+    const distance =
+      Math.abs(
+        y - centerY,
+      );
+
+    if (
+      distance >
+      PAINT_RADIUS
+    ) {
+      continue;
+    }
+
+    const strength =
+      1 -
+      distance /
+        PAINT_RADIUS;
+
+    // paint vertex here
+  }
+
+  pos.needsUpdate = true;
+}
 // ============================================================
 // PAINTING HAND INPUT
 // ============================================================
 
 function updatePaintingHandInput(hand) {
+  // ==========================================================
+  // PAINT ROOM
+  // ==========================================================
+
+  finger.visible = true;
+
   const index = hand[8];
 
   const pinch =
@@ -1456,7 +1537,7 @@ function updatePaintingHandInput(hand) {
     isOpenPalm(hand);
 
   // ==========================================================
-  // OPEN PALM → CAMERA PAN
+  // OPEN PALM → CAMERA CONTROL
   // ==========================================================
 
   if (
@@ -1488,6 +1569,57 @@ function updatePaintingHandInput(hand) {
   }
 
   // ==========================================================
+  // INDEX → RAYCAST TO POT
+  // ==========================================================
+
+  mouse.x =
+    1 -
+    index.x * 2;
+
+  mouse.y =
+    1 -
+    index.y * 2;
+
+  raycaster.setFromCamera(
+    mouse,
+    camera,
+  );
+
+  const hit =
+    raycaster.intersectObject(
+      pot,
+    );
+
+  if (!hit.length) {
+    paintHighlight.visible = false;
+    return;
+  }
+
+  // ==========================================================
+  // ACTUAL 3D PAINT HEIGHT
+  // ==========================================================
+
+  const point =
+    hit[0].point;
+
+  const paintY =
+    THREE.MathUtils.clamp(
+      point.y,
+      0,
+      INITIAL_HEIGHT,
+    );
+
+  // ==========================================================
+  // SHOW PAINT AREA
+  // ==========================================================
+
+  updatePaintHighlight(
+    paintY,
+  );
+
+  paintHighlight.visible = true;
+
+  // ==========================================================
   // PINCH → PAINT
   // ==========================================================
 
@@ -1497,16 +1629,16 @@ function updatePaintingHandInput(hand) {
   ) {
     updateGestureHUD(
       "Painting",
-      "edit-3",
+      "paintbrush",
     );
 
     paintHorizontalRing(
-      index.y,
+      paintY,
     );
   }
 
-  // ==========================================================
-  // POINTER / RAYCAST
+    // ==========================================================
+  // FINGER POINTER
   // ==========================================================
 
   updateFingerPointer(

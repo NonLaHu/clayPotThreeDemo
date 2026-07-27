@@ -125,6 +125,15 @@ let pinchActive = false;
 let pinchStartX = 0;
 
 // ============================================================
+// PAINTING STATE
+// ============================================================
+
+const PAINT_RING_WIDTH = 4;
+
+let lastPaintY = null;
+let paintingActive = false;
+
+// ============================================================
 // CAMERA / WEBCAM
 // ============================================================
 
@@ -337,12 +346,40 @@ const geometry =
     segments,
   );
 
+  // ============================================================
+// PAINT VERTEX COLORS
+// ============================================================
+
+const vertexColors =
+  new Float32Array(
+    geometry.attributes.position.count * 3,
+  );
+
+for (
+  let i = 0;
+  i < geometry.attributes.position.count;
+  i++
+) {
+  vertexColors[i * 3] = 0.71;
+  vertexColors[i * 3 + 1] = 0.396;
+  vertexColors[i * 3 + 2] = 0.208;
+}
+
+geometry.setAttribute(
+  "color",
+  new THREE.BufferAttribute(
+    vertexColors,
+    3,
+  ),
+);
+
 const material =
   new THREE.MeshStandardMaterial({
-    color: 0xb56535,
+    color: 0xffffff,
     roughness: 0.92,
     metalness: 0,
     side: THREE.DoubleSide,
+    vertexColors: true,
   });
 
 const pot =
@@ -1296,19 +1333,258 @@ function getPinchStrength(
 }
 
 // ============================================================
-// GESTURE INPUT
+// PAINT CLAY — HORIZONTAL RING
 // ============================================================
 
-function updateHandInput(
-  hand,
+function paintHorizontalRing(
+  handY,
 ) {
   if (
     currentRoom !==
-    ROOM_STATE.SCULPT_ROOM
+    ROOM_STATE.PAINT_ROOM
   ) {
-    sculptPoint = null;
     return;
   }
+
+  const colors =
+    geometry.attributes.color;
+
+  const positions =
+    geometry.attributes.position;
+
+  // Convert hand Y from MediaPipe
+  // into clay height.
+
+  const clayY =
+    THREE.MathUtils.mapLinear(
+      handY,
+      0.8,
+      0.2,
+      0,
+      INITIAL_HEIGHT,
+    );
+
+  const clampedY =
+    THREE.MathUtils.clamp(
+      clayY,
+      0,
+      INITIAL_HEIGHT,
+    );
+
+  // ----------------------------------------------------------
+  // Paint approximately 4 horizontal vertex rows
+  // ----------------------------------------------------------
+
+  for (
+    let i = 0;
+    i < positions.count;
+    i++
+  ) {
+    const vertexY =
+      positions.getY(i);
+
+    const distance =
+      Math.abs(
+        vertexY -
+        clampedY,
+      );
+
+    // Determine spacing between horizontal rows.
+    const rowHeight =
+      INITIAL_HEIGHT / 40;
+
+    const brushHeight =
+      rowHeight *
+      PAINT_RING_WIDTH;
+
+    if (
+      distance >
+      brushHeight
+    ) {
+      continue;
+    }
+
+    // Soft brush falloff
+    const strength =
+      1 -
+      distance /
+        brushHeight;
+
+    const target =
+      new THREE.Color(
+        selectedColor,
+      );
+
+    const current =
+      new THREE.Color();
+
+    current.fromBufferAttribute(
+      colors,
+      i,
+    );
+
+    current.lerp(
+      target,
+      strength * 0.35,
+    );
+
+    colors.setXYZ(
+      i,
+      current.r,
+      current.g,
+      current.b,
+    );
+  }
+
+  colors.needsUpdate = true;
+}
+
+// ============================================================
+// PAINTING HAND INPUT
+// ============================================================
+// ============================================================
+// PAINTING HAND INPUT
+// ============================================================
+
+function updatePaintingHandInput(hand) {
+  const index = hand[8];
+
+  const pinch =
+    getPinchStrength(hand);
+
+  const openPalm =
+    isOpenPalm(hand);
+
+  // ==========================================================
+  // OPEN PALM → CAMERA PAN
+  // ==========================================================
+
+  if (
+    openPalm &&
+    pinch <= 0.5
+  ) {
+    updateGestureHUD(
+      "Rotating Camera",
+      "edit-3",
+    );
+
+    const palmY =
+      (
+        hand[0].y +
+        hand[5].y +
+        hand[9].y +
+        hand[13].y +
+        hand[17].y
+      ) / 5;
+
+    targetCameraAngle =
+      THREE.MathUtils.mapLinear(
+        palmY,
+        0.2,
+        0.8,
+        -0.2,
+        1.2,
+      );
+  }
+
+  // ==========================================================
+  // PINCH → PAINT
+  // ==========================================================
+
+  if (
+    pinch > 0.5 &&
+    !openPalm
+  ) {
+    updateGestureHUD(
+      "Painting",
+      "edit-3",
+    );
+
+    paintHorizontalRing(
+      index.y,
+    );
+  }
+
+  // ==========================================================
+  // POINTER / RAYCAST
+  // ==========================================================
+
+  updateFingerPointer(
+    index,
+  );
+}
+
+
+// ============================================================
+// COMMON FINGER POINTER
+// ============================================================
+
+function updateFingerPointer(index) {
+  mouse.x =
+    1 -
+    index.x * 2;
+
+  mouse.y =
+    1 -
+    index.y * 2;
+
+  raycaster.setFromCamera(
+    mouse,
+    camera,
+  );
+
+  const hit =
+    raycaster.intersectObject(
+      pot,
+    );
+
+  if (hit.length) {
+    sculptPoint =
+      hit[0].point.clone();
+
+    const normal =
+      hit[0].face.normal.clone();
+
+    normal.transformDirection(
+      pot.matrixWorld,
+    );
+
+    targetFinger.copy(
+      hit[0].point,
+    );
+
+    targetFinger.addScaledVector(
+      normal,
+      0.03,
+    );
+
+    finger.visible = true;
+  } else {
+    sculptPoint = null;
+
+    finger.visible = false;
+  }
+}
+
+// ============================================================
+// GESTURE INPUT
+// ============================================================
+function updateHandInput(hand) {
+  // ==========================================================
+  // PAINT ROOM
+  // ==========================================================
+
+  if (
+    currentRoom ===
+    ROOM_STATE.PAINT_ROOM
+  ) {
+    updatePaintingHandInput(hand);
+    return;
+  }
+
+  // ==========================================================
+  // SCULPT ROOM
+  // ==========================================================
 
   const index = hand[8];
 
@@ -1338,13 +1614,11 @@ function updateHandInput(
 
     if (!pinchActive) {
       pinchActive = true;
-      pinchStartX =
-        index.x;
+      pinchStartX = index.x;
     }
 
     const movement =
-      index.x -
-      pinchStartX;
+      index.x - pinchStartX;
 
     targetRadiusChange =
       movement *
@@ -1374,12 +1648,9 @@ function updateHandInput(
       "maximize-2",
     );
 
-    const middle =
-      hand[12];
+    const middle = hand[12];
 
-    if (
-      lastHeightY !== null
-    ) {
+    if (lastHeightY !== null) {
       const movement =
         lastHeightY -
         middle.y;
@@ -1675,7 +1946,12 @@ function animate() {
   // CLAY
   // ==========================================================
 
+if (
+  currentRoom ===
+  ROOM_STATE.SCULPT_ROOM
+) {
   updateClay();
+}
 
   // ==========================================================
   // POTTERY WHEEL

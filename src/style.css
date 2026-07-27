@@ -28,7 +28,7 @@
 #done-button {
   position: fixed;
   bottom: 30px;
-  right: 30px;
+  left: 30px;
   padding: 15px 40px;
   background: linear-gradient(135deg, #8B5A2B 0%, #6B4423 100%);
   color: #FFF8DC;

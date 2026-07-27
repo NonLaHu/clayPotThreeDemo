@@ -1,381 +1,578 @@
 import * as THREE from "three";
 import "./style.css";
-import {
-  setupEnvironment
-} from "./environment.js";
-import {
-  setupPaintingEnvironment
-} from "./paintingEnvironment.js";
-import {
-  initHand,
-  detectHand
-} from "./hand.js";
 
+import { setupEnvironment } from "./environment.js";
+import { setupPaintingEnvironment } from "./paintingEnvironment.js";
+import { initHand, detectHand } from "./hand.js";
 
-const DEBUG = false; // false = hide everything
+import {
+  initUI,
+  updateGestureHUD,
+} from "./UI/ui.js";
 
-// =====================
-// Room State Management
-// =====================
+import {
+  initSound,
+  resumeSound,
+  setSoundEnabled,
+  updateWheelSound,
+  updateSculptSound,
+  stopSculptSound,
+} from "./sound.js";
+
+const DEBUG = true;
+
+// ============================================================
+// ROOM STATE
+// ============================================================
 
 const ROOM_STATE = {
-  SCULPT_ROOM: 'sculpt_room',
-  PAINT_ROOM: 'paint_room'
+  SCULPT_ROOM: "sculpt_room",
+  PAINT_ROOM: "paint_room",
 };
 
 let currentRoom = ROOM_STATE.SCULPT_ROOM;
+
 let sculptingEnvironmentGroup = null;
 let paintingEnvironmentGroup = null;
-let selectedColor = '#B56535'; // Default clay color
+
+let selectedColor = "#B56535";
+
+// ============================================================
+// DEBUG CAMERA VIDEO
+// ============================================================
 
 const video = document.createElement("video");
 
+video.autoplay = true;
+video.playsInline = true;
+video.muted = true;
+
 if (DEBUG) {
-  video.style.position = "absolute";
-  video.style.right = "20px";
-  video.style.bottom = "20px";
+  video.style.position = "fixed";
+  video.style.bottom = "10px";
+  video.style.right = "10px";
   video.style.width = "320px";
-  video.style.border = "2px solid white";
-  video.style.zIndex = "10";
+  video.style.zIndex = "9999";
   video.style.transform = "scaleX(-1)";
+
   document.body.appendChild(video);
 }
 
+// ============================================================
+// HAND CONNECTIONS
+// ============================================================
 
 const HAND_CONNECTIONS = [
+  [0, 1],
+  [1, 2],
+  [2, 3],
+  [3, 4],
 
-  [0, 1], [1, 2], [2, 3], [3, 4],
+  [0, 5],
+  [5, 6],
+  [6, 7],
+  [7, 8],
 
-  [0, 5], [5, 6], [6, 7], [7, 8],
+  [5, 9],
+  [9, 10],
+  [10, 11],
+  [11, 12],
 
-  [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13],
+  [13, 14],
+  [14, 15],
+  [15, 16],
 
-  [9, 13], [13, 14], [14, 15], [15, 16],
+  [13, 17],
+  [17, 18],
+  [18, 19],
+  [19, 20],
 
-  [13, 17], [17, 18], [18, 19], [19, 20],
-
-  [0, 17]
-
+  [0, 17],
 ];
+
+// ============================================================
+// DEBUG CANVAS
+// ============================================================
 
 let debugCanvas;
 let debugCtx;
 
 if (DEBUG) {
   debugCanvas = document.createElement("canvas");
+
   debugCanvas.width = 320;
   debugCanvas.height = 240;
 
-  debugCanvas.style.position = "absolute";
-  debugCanvas.style.right = "20px";
-  debugCanvas.style.bottom = "20px";
-  debugCanvas.style.width = "320px";
-  debugCanvas.style.height = "240px";
+  debugCanvas.style.position = "fixed";
+  debugCanvas.style.bottom = "10px";
+  debugCanvas.style.right = "10px";
+  debugCanvas.style.zIndex = "10000";
   debugCanvas.style.pointerEvents = "none";
-  debugCanvas.style.zIndex = "20";
 
   document.body.appendChild(debugCanvas);
 
   debugCtx = debugCanvas.getContext("2d");
 }
 
+// ============================================================
+// GESTURE STATE
+// ============================================================
 
-
-let lastPinchX = null;
 let lastHeightY = null;
+
 let pinchActive = false;
 let pinchStartX = 0;
 
-async function startCamera() {
+// ============================================================
+// CAMERA / WEBCAM
+// ============================================================
 
+async function startCamera() {
   const stream =
     await navigator.mediaDevices.getUserMedia({
       video: {
         width: 640,
-        height: 480
-      }
+        height: 480,
+      },
     });
-
 
   video.srcObject = stream;
 
   await video.play();
 
-
-  console.log(
-    "camera ready"
-  );
-
+  console.log("camera ready");
 }
 
+// ============================================================
+// SCENE
+// ============================================================
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
 
-// =====================
-// Environment Setup
-// =====================
+scene.background =
+  new THREE.Color(0x111111);
 
-// Create group for sculpting environment
-sculptingEnvironmentGroup = new THREE.Group();
-const environment = setupEnvironment(sculptingEnvironmentGroup);
-scene.add(sculptingEnvironmentGroup);
+// ============================================================
+// SCULPTING ENVIRONMENT
+// ============================================================
 
-// Create group for painting environment (initially hidden)
-paintingEnvironmentGroup = new THREE.Group();
-const paintingEnv = setupPaintingEnvironment(paintingEnvironmentGroup);
-paintingEnvironmentGroup.visible = false;
-scene.add(paintingEnvironmentGroup);
+sculptingEnvironmentGroup =
+  new THREE.Group();
 
-
-
-
-const camera = new THREE.PerspectiveCamera(
-  45,
-  window.innerWidth / window.innerHeight,
-  0.1,
-  100
+setupEnvironment(
+  sculptingEnvironmentGroup,
 );
+
+scene.add(
+  sculptingEnvironmentGroup,
+);
+
+// ============================================================
+// PAINTING ENVIRONMENT
+// ============================================================
+
+paintingEnvironmentGroup =
+  new THREE.Group();
+
+setupPaintingEnvironment(
+  paintingEnvironmentGroup,
+);
+
+paintingEnvironmentGroup.visible = false;
+
+scene.add(
+  paintingEnvironmentGroup,
+);
+
+// ============================================================
+// CAMERA
+// ============================================================
+
+const camera =
+  new THREE.PerspectiveCamera(
+    45,
+    window.innerWidth /
+      window.innerHeight,
+    0.1,
+    100,
+  );
 
 camera.position.set(
   3,
   2.5,
-  5
+  5,
 );
 
 camera.lookAt(
   0,
   1,
-  0
+  0,
 );
 
+// ============================================================
+// SCULPT SETTINGS
+// ============================================================
+
 const BRUSH_HEIGHT = 0.25;
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
+
+const raycaster =
+  new THREE.Raycaster();
+
+const mouse =
+  new THREE.Vector2();
+
 let sculptPoint = null;
 
 let targetRadiusChange = 0;
 let targetHeightChange = 0;
 
-let currentRadiusChange = 0;
-let currentHeightChange = 0;
-
 const CLAY_RESISTANCE = 0.05;
 const MAX_FORCE = 0.005;
 
-const renderer = new THREE.WebGLRenderer({
-  antialias: true
-});
+// ============================================================
+// RENDERER
+// ============================================================
+
+const renderer =
+  new THREE.WebGLRenderer({
+    antialias: true,
+    preserveDrawingBuffer: true,
+  });
+
 renderer.setSize(
   window.innerWidth,
-  window.innerHeight
+  window.innerHeight,
 );
-document.body.appendChild(renderer.domElement);
 
-// =====================
-// Camera Vertical Control
-// =====================
+document.body.appendChild(
+  renderer.domElement,
+);
 
-let cameraDragging = false;
-let cameraLastY = 0;
+// ============================================================
+// CAMERA VERTICAL CONTROL
+// ============================================================
 
 let cameraAngle = 0.45;
-
-// window.addEventListener(
-//   "pointerdown",
-//   (e)=>{
-
-//     if(e.ctrlKey){
-
-//       cameraDragging = true;
-//       cameraLastY = e.clientY;
-
-//     }
-
-//   }
-// );
-
-
-// window.addEventListener(
-//   "pointerup",
-//   ()=>{
-
-//     cameraDragging = false;
-
-//   }
-// );
-
-
-// window.addEventListener(
-//   "pointermove",
-//   (e)=>{
-
-//     if(!cameraDragging)
-//       return;
-
-
-//     const delta =
-//       (e.clientY - cameraLastY)
-//       * 0.005;
-
-
-//     cameraLastY = e.clientY;
-
-
-//     cameraAngle += delta;
-
-
-//     cameraAngle =
-//       THREE.MathUtils.clamp(
-//         cameraAngle,
-//         -0.2,
-//         1.2
-//       );
-
-
-//     updateCamera();
-
-//   }
-// );
-
+let targetCameraAngle = cameraAngle;
 
 function updateCamera() {
-
   const radius = 5;
-
 
   camera.position.y =
     2 +
-    Math.sin(cameraAngle)
-    * radius;
-
+    Math.sin(cameraAngle) *
+      radius;
 
   camera.position.z =
-    Math.cos(cameraAngle)
-    * radius;
-
+    Math.cos(cameraAngle) *
+      radius;
 
   camera.lookAt(
     0,
     1,
-    0
+    0,
   );
-
 }
 
-let targetCameraAngle = cameraAngle;
-
-
-// =====================
-// Clay Pot Geometry
-// =====================
+// ============================================================
+// CLAY POT GEOMETRY
+// ============================================================
 
 const points = [];
 
 const MAX_HEIGHT = 4;
 const INITIAL_HEIGHT = 2;
+
 const segments = 64;
-
 const thickness = 0.05;
+// ============================================================
+// CYLINDER WALL
+// ============================================================
 
+const CYLINDER_RADIUS = 0.7;
 
-// outer wall
+// Outer wall
 for (let i = 0; i <= 40; i++) {
-
   const y =
-    i / 40 * INITIAL_HEIGHT;
-
-
-  let radius;
-
-  if (y < 0.2) {
-    radius = 0.8;
-  }
-  else if (y < 1.2) {
-    radius = 0.55 + y * 0.15;
-  }
-  else {
-    radius = 0.75 - (y - 1.2) * 0.25;
-  }
-
+    (i / 40) *
+    INITIAL_HEIGHT;
 
   points.push(
     new THREE.Vector2(
-      radius,
-      y
-    )
+      CYLINDER_RADIUS,
+      y,
+    ),
   );
-
 }
 
-
-// inner wall (reverse direction)
-// inner wall
+// Inner wall
 for (let i = 40; i >= 0; i--) {
-
   const y =
-    i / 40 * INITIAL_HEIGHT;
-
-  let radius;
-
-  if (y < 0.2) {
-    radius = 0.8;
-  }
-  else if (y < 1.2) {
-    radius = 0.55 + y * 0.15;
-  }
-  else {
-    radius = 0.75 - (y - 1.2) * 0.25;
-  }
-
+    (i / 40) *
+    INITIAL_HEIGHT;
 
   points.push(
     new THREE.Vector2(
-      radius - thickness,
-      y
-    )
+      CYLINDER_RADIUS - thickness,
+      y,
+    ),
   );
-
-
-
 }
+
 points.push(
   new THREE.Vector2(
     0,
-    0.08
-  )
+    0.08,
+  ),
 );
+
+// ============================================================
+// CREATE POT
+// ============================================================
 
 const geometry =
   new THREE.LatheGeometry(
     points,
-    segments
+    segments,
   );
 
-const material = new THREE.MeshStandardMaterial({
-  color: 0xb56535,
-  roughness: 0.92,
-  metalness: 0,
-  side: THREE.DoubleSide // This makes both the inside and outside visible
-});
+const material =
+  new THREE.MeshStandardMaterial({
+    color: 0xb56535,
+    roughness: 0.92,
+    metalness: 0,
+    side: THREE.DoubleSide,
+  });
 
 const pot =
   new THREE.Mesh(
     geometry,
-    material
+    material,
   );
-
 
 scene.add(pot);
 
+// ============================================================
+// SOUND
+// ============================================================
+
+initSound();
+
+// ============================================================
+// CLAY STATE
+// ============================================================
+
+const initialClayPositions =
+  geometry.attributes.position.array.slice();
 
 const clayPositions =
   geometry.attributes.position.array.slice();
 
+// ============================================================
+// TRANSITION: SCULPT -> PAINT
+// ============================================================
 
+function transitionToPaintRoom() {
+  if (
+    currentRoom !==
+    ROOM_STATE.SCULPT_ROOM
+  ) {
+    return;
+  }
 
-// =====================
-// Ground
-// =====================
+  const transitionOverlay =
+    document.getElementById(
+      "transition-overlay",
+    );
+
+  const colorSelector =
+    document.getElementById(
+      "color-selector",
+    );
+
+  const paintingControls =
+    document.getElementById(
+      "painting-controls",
+    );
+
+  const paintingDoneButton =
+    document.getElementById(
+      "painting-done-button",
+    );
+
+  if (transitionOverlay) {
+    transitionOverlay.classList.add(
+      "active",
+    );
+  }
+
+  setTimeout(() => {
+    // --------------------------------------------------------
+    // Hide sculpt room
+    // --------------------------------------------------------
+
+    sculptingEnvironmentGroup.visible =
+      false;
+
+    // --------------------------------------------------------
+    // Show paint room
+    // --------------------------------------------------------
+
+    paintingEnvironmentGroup.visible =
+      true;
+
+    // --------------------------------------------------------
+    // Stop sculpting audio
+    // --------------------------------------------------------
+
+    updateWheelSound(0);
+    stopSculptSound();
+
+    // --------------------------------------------------------
+    // Painting UI
+    // --------------------------------------------------------
+
+    if (colorSelector) {
+      colorSelector.classList.add(
+        "visible",
+      );
+    }
+
+    if (paintingControls) {
+      paintingControls.classList.add(
+        "visible",
+      );
+    }
+
+    if (paintingDoneButton) {
+      paintingDoneButton.classList.add(
+        "visible",
+      );
+    }
+
+    // --------------------------------------------------------
+    // Change room
+    // --------------------------------------------------------
+
+    currentRoom =
+      ROOM_STATE.PAINT_ROOM;
+
+    // --------------------------------------------------------
+    // Finish fade
+    // --------------------------------------------------------
+
+    setTimeout(() => {
+      if (transitionOverlay) {
+        transitionOverlay.classList.remove(
+          "active",
+        );
+      }
+    }, 100);
+  }, 500);
+}
+
+// ============================================================
+// UI
+// ============================================================
+
+initUI({
+  // ----------------------------------------------------------
+  // RESET
+  // ----------------------------------------------------------
+
+  onReset: () => {
+    const confirmed =
+      window.confirm(
+        "Are you sure you want to reset your pottery progress?",
+      );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const pos =
+      geometry.attributes.position;
+
+    for (
+      let i = 0;
+      i < pos.count * 3;
+      i++
+    ) {
+      pos.array[i] =
+        initialClayPositions[i];
+
+      clayPositions[i] =
+        initialClayPositions[i];
+    }
+
+    pos.needsUpdate = true;
+
+    geometry.computeVertexNormals();
+  },
+
+  // ----------------------------------------------------------
+  // EXPORT
+  // ----------------------------------------------------------
+
+  onExport: () => {
+    renderer.render(
+      scene,
+      camera,
+    );
+
+    const image =
+      renderer.domElement.toDataURL(
+        "image/png",
+      );
+
+    const link =
+      document.createElement("a");
+
+    link.download =
+      `clay-pot-${Date.now()}.png`;
+
+    link.href = image;
+
+    link.click();
+  },
+
+  // ----------------------------------------------------------
+  // SOUND
+  // ----------------------------------------------------------
+
+  onSoundToggle: async (
+    enabled,
+  ) => {
+    if (!enabled) {
+      setSoundEnabled(false);
+      return;
+    }
+
+    const state =
+      await resumeSound();
+
+    if (state !== "running") {
+      throw new Error(
+        "Audio could not be started.",
+      );
+    }
+
+    setSoundEnabled(true);
+  },
+
+  // ----------------------------------------------------------
+  // DONE
+  // ----------------------------------------------------------
+
+  onDone: () => {
+    transitionToPaintRoom();
+  },
+});
+
+// ============================================================
+// GROUND
+// ============================================================
 
 const ground =
   new THREE.Mesh(
@@ -383,472 +580,600 @@ const ground =
       1.2,
       1.2,
       0.1,
-      64
+      64,
     ),
+
     new THREE.MeshStandardMaterial({
-      color: 0x333333
-    })
+      color: 0x333333,
+    }),
   );
 
-ground.position.y = -0.05;
+ground.position.y =
+  -0.05;
 
 scene.add(ground);
 
-
-// =====================
-// Lights
-// =====================
+// ============================================================
+// LIGHTS
+// ============================================================
 
 scene.add(
   new THREE.HemisphereLight(
     0xffffff,
     0x444444,
-    2
-  )
+    2,
+  ),
 );
-
 
 const light =
   new THREE.DirectionalLight(
     0xffffff,
-    2
+    2,
   );
 
 light.position.set(
   3,
   5,
-  3
+  3,
 );
 
 light.castShadow = true;
-light.shadow.mapSize.width = 1024;
-light.shadow.mapSize.height = 1024;
-light.shadow.camera.near = 0.5;
-light.shadow.camera.far = 50;
+
+light.shadow.mapSize.width =
+  1024;
+
+light.shadow.mapSize.height =
+  1024;
+
+light.shadow.camera.near =
+  0.5;
+
+light.shadow.camera.far =
+  50;
 
 scene.add(light);
+
+// ============================================================
+// FINGER INDICATOR
+// ============================================================
 
 const targetFinger =
   new THREE.Vector3();
 
-let finger;
+const finger =
+  new THREE.Mesh(
+    new THREE.SphereGeometry(
+      0.05,
+    ),
 
-// if (DEBUG) {
-
-finger = new THREE.Mesh(
-  new THREE.SphereGeometry(0.05),
-  new THREE.MeshBasicMaterial({
-    color: 0xff0000
-  })
-);
+    new THREE.MeshBasicMaterial({
+      color: 0xff0000,
+    }),
+  );
 
 scene.add(finger);
 
-// }
+// ============================================================
+// HAND SETUP
+// ============================================================
 
 async function setup() {
+  try {
+    await startCamera();
 
-  await startCamera();
+    await initHand();
 
-  await initHand();
+    console.log(
+      "hand tracking + sound ready",
+    );
+  } catch (error) {
+    console.error(
+      "Setup failed:",
+      error,
+    );
 
+    updateGestureHUD(
+      "Camera unavailable",
+      "alert-circle",
+    );
+  }
 }
-
 
 setup();
 
-// =====================
-// UI Initialization
-// =====================
+// ============================================================
+// PAINTING UI
+// ============================================================
 
-// Initialize Done button
-const doneButton = document.getElementById('done-button');
-const transitionOverlay = document.getElementById('transition-overlay');
-const colorSelector = document.getElementById('color-selector');
-const paintingControls = document.getElementById('painting-controls');
+const transitionOverlay =
+  document.getElementById(
+    "transition-overlay",
+  );
 
-// Create sunflower petals
-const sunflowerWheel = document.querySelector('.sunflower-wheel');
+const colorSelector =
+  document.getElementById(
+    "color-selector",
+  );
+
+const paintingControls =
+  document.getElementById(
+    "painting-controls",
+  );
+
+const paintingDoneButton =
+  document.getElementById(
+    "painting-done-button",
+  );
+
+const sunflowerWheel =
+  document.querySelector(
+    ".sunflower-wheel",
+  );
+
 const petalColors = [
-  0xFF4500, // Burnt Orange
-  0xDC143C, // Crimson Red
-  0xFFD700, // Mustard Yellow
-  0x808000, // Olive Green
-  0x87CEEB, // Sky Blue
-  0x008080, // Teal
-  0x4B0082, // Indigo
-  0x800080, // Purple
-  0xE6E6FA, // Lavender
-  0x4A3728, // Deep Brown
-  0x36454F, // Charcoal Grey
-  0xFFF8DC  // Cream
+  0xff4500,
+  0xdc143c,
+  0xffd700,
+  0x808000,
+  0x87ceeb,
+  0x008080,
+  0x4b0082,
+  0x800080,
+  0xe6e6fa,
+  0x4a3728,
+  0x36454f,
+  0xfff8dc,
 ];
 
 const colorHex = [
-  '#FF4500', '#DC143C', '#FFD700', '#808000',
-  '#87CEEB', '#008080', '#4B0082', '#800080',
-  '#E6E6FA', '#4A3728', '#36454F', '#FFF8DC'
+  "#FF4500",
+  "#DC143C",
+  "#FFD700",
+  "#808000",
+  "#87CEEB",
+  "#008080",
+  "#4B0082",
+  "#800080",
+  "#E6E6FA",
+  "#4A3728",
+  "#36454F",
+  "#FFF8DC",
 ];
 
-// Enable Done button after initialization
-setTimeout(() => {
-  doneButton.classList.add('enabled');
-}, 2000);
+// ============================================================
+// PAINTING DONE
+// ============================================================
 
-// Done button click handler
-doneButton.addEventListener('click', () => {
-  if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
-    transitionToPaintRoom();
-  }
-});
-
-// Transition function
-function transitionToPaintRoom() {
-  // Start fade
-  transitionOverlay.classList.add('active');
-  
-  // After fade completes, switch rooms
-  setTimeout(() => {
-    // Hide sculpting environment
-    sculptingEnvironmentGroup.visible = false;
-    
-    // Show painting environment
-    paintingEnvironmentGroup.visible = true;
-    
-    // Update UI
-    doneButton.style.display = 'none';
-    colorSelector.classList.add('visible');
-    paintingControls.classList.add('visible');
-    document.getElementById('painting-done-button').classList.add('visible');
-    
-    // Update state
-    currentRoom = ROOM_STATE.PAINT_ROOM;
-    
-    // Fade out
-    setTimeout(() => {
-      transitionOverlay.classList.remove('active');
-    }, 100);
-  }, 500);
+if (paintingDoneButton) {
+  paintingDoneButton.addEventListener(
+    "click",
+    () => {
+      console.log(
+        "Painting complete",
+      );
+    },
+  );
 }
 
-// Painting Done button handler
-document.getElementById('painting-done-button').addEventListener('click', () => {
-  console.log('Painting complete (placeholder)');
-});
+// ============================================================
+// COLOR SELECTOR
+// ============================================================
 
-// Color selection logic
-petalColors.forEach((color, index) => {
-  const petal = document.createElement('div');
-  petal.className = 'petal';
-  petal.style.backgroundColor = colorHex[index];
-  petal.dataset.color = colorHex[index];
-  
-  const angle = (index / petalColors.length) * Math.PI * 2;
-  const radius = 70; // Distance from center
-  const x = 100 + Math.cos(angle) * radius - 20; // Center offset
-  const y = 100 + Math.sin(angle) * radius - 30;
-  
-  petal.style.left = x + 'px';
-  petal.style.top = y + 'px';
-  petal.style.transform = `rotate(${angle + Math.PI/2}rad)`;
-  
-  // Color selection click handler
-  petal.addEventListener('click', () => {
-    // Remove selected class from all petals
-    document.querySelectorAll('.petal').forEach(p => p.classList.remove('selected'));
-    
-    // Add selected class to clicked petal
-    petal.classList.add('selected');
-    
-    // Update selected color
-    selectedColor = colorHex[index];
-    
-    // Update center preview
-    const sunflowerCenter = document.querySelector('.sunflower-center');
-    sunflowerCenter.style.background = `radial-gradient(circle, ${selectedColor} 0%, ${adjustColorBrightness(selectedColor, -20)} 100%)`;
-    
-    // Update color preview in controls
-    document.querySelector('.color-preview').style.background = selectedColor;
-  });
-  
-  sunflowerWheel.appendChild(petal);
-});
+if (sunflowerWheel) {
+  petalColors.forEach(
+    (color, index) => {
+      const petal =
+        document.createElement(
+          "div",
+        );
 
-// Helper function to adjust color brightness
-function adjustColorBrightness(hex, percent) {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = (num >> 16) + amt;
-  const G = (num >> 8 & 0x00FF) + amt;
-  const B = (num & 0x0000FF) + amt;
-  return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+      petal.className =
+        "petal";
+
+      petal.style.backgroundColor =
+        colorHex[index];
+
+      petal.dataset.color =
+        colorHex[index];
+
+      const angle =
+        (index /
+          petalColors.length) *
+        Math.PI *
+        2;
+
+      const radius = 70;
+
+      const x =
+        100 +
+        Math.cos(angle) *
+          radius -
+        20;
+
+      const y =
+        100 +
+        Math.sin(angle) *
+          radius -
+        30;
+
+      petal.style.left =
+        x + "px";
+
+      petal.style.top =
+        y + "px";
+
+      petal.style.transform =
+        `rotate(${angle + Math.PI / 2}rad)`;
+
+      petal.addEventListener(
+        "click",
+        () => {
+          document
+            .querySelectorAll(
+              ".petal",
+            )
+            .forEach((p) => {
+              p.classList.remove(
+                "selected",
+              );
+            });
+
+          petal.classList.add(
+            "selected",
+          );
+
+          selectedColor =
+            colorHex[index];
+
+          const center =
+            document.querySelector(
+              ".sunflower-center",
+            );
+
+          if (center) {
+            center.style.background =
+              `radial-gradient(
+                circle,
+                ${selectedColor} 0%,
+                ${adjustColorBrightness(
+                  selectedColor,
+                  -20,
+                )} 100%
+              )`;
+          }
+
+          const preview =
+            document.querySelector(
+              ".color-preview",
+            );
+
+          if (preview) {
+            preview.style.background =
+              selectedColor;
+          }
+        },
+      );
+
+      sunflowerWheel.appendChild(
+        petal,
+      );
+    },
+  );
 }
 
-// Initialize center color preview
-const sunflowerCenter = document.querySelector('.sunflower-center');
-sunflowerCenter.style.background = `radial-gradient(circle, ${selectedColor} 0%, #8B4513 100%)`;
+// ============================================================
+// COLOR BRIGHTNESS
+// ============================================================
 
-// =====================
-// Clay Sculpting Control
-// =====================
+function adjustColorBrightness(
+  hex,
+  percent,
+) {
+  const num =
+    parseInt(
+      hex.replace("#", ""),
+      16,
+    );
+
+  const amt =
+    Math.round(
+      2.55 * percent,
+    );
+
+  const R =
+    (num >> 16) + amt;
+
+  const G =
+    ((num >> 8) &
+      0x00ff) +
+    amt;
+
+  const B =
+    (num & 0x0000ff) +
+    amt;
+
+  return (
+    "#" +
+    (
+      0x1000000 +
+      (R < 255
+        ? R < 1
+          ? 0
+          : R
+        : 255) *
+        0x10000 +
+      (G < 255
+        ? G < 1
+          ? 0
+          : G
+        : 255) *
+        0x100 +
+      (B < 255
+        ? B < 1
+          ? 0
+          : B
+        : 255)
+    )
+      .toString(16)
+      .slice(1)
+  );
+}
+
+// ============================================================
+// INITIAL COLOR PREVIEW
+// ============================================================
+
+const sunflowerCenter =
+  document.querySelector(
+    ".sunflower-center",
+  );
+
+if (sunflowerCenter) {
+  sunflowerCenter.style.background =
+    `radial-gradient(
+      circle,
+      ${selectedColor} 0%,
+      #8B4513 100%
+    )`;
+}
+
+// ============================================================
+// MOUSE SCULPTING
+// ============================================================
 
 let dragging = false;
 
 let lastX = 0;
 let lastY = 0;
 
-
-// store original profile
-const clayProfile = points.map(p => ({
-  radius: p.x,
-  height: p.y
-}));
-
-
 window.addEventListener(
   "pointerdown",
   (e) => {
-
-    if (e.ctrlKey)
+    if (e.ctrlKey) {
       return;
+    }
 
-    // Only enable sculpting in Sculpting Room
-    if (currentRoom !== ROOM_STATE.SCULPT_ROOM)
+    if (
+      currentRoom !==
+      ROOM_STATE.SCULPT_ROOM
+    ) {
       return;
-
+    }
 
     dragging = true;
 
     lastX = e.clientX;
     lastY = e.clientY;
-
-  });
-
+  },
+);
 
 window.addEventListener(
   "pointerup",
   () => {
-
     dragging = false;
-
-  }
+  },
 );
 
+window.addEventListener(
+  "pointercancel",
+  () => {
+    dragging = false;
+  },
+);
 
 window.addEventListener(
   "pointermove",
   (e) => {
-
-
     mouse.x =
-      (e.clientX / window.innerWidth) * 2 - 1;
+      (e.clientX /
+        window.innerWidth) *
+        2 -
+      1;
 
     mouse.y =
-      -(e.clientY / window.innerHeight) * 2 + 1;
+      -(e.clientY /
+        window.innerHeight) *
+        2 +
+      1;
 
-
-    // Only do sculpting raycasting in Sculpting Room
-    if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
-      raycaster.setFromCamera(
-        mouse,
-        camera
-      );
-
-
-      const hit =
-        raycaster.intersectObject(
-          pot
-        );
-
-
-      if (hit.length) {
-        sculptPoint =
-          hit[0].point.clone();
-      }
-      else {
-        sculptPoint = null;
-      }
+    if (
+      currentRoom !==
+      ROOM_STATE.SCULPT_ROOM
+    ) {
+      return;
     }
 
+    raycaster.setFromCamera(
+      mouse,
+      camera,
+    );
 
-    if (!dragging)
+    const hit =
+      raycaster.intersectObject(
+        pot,
+      );
+
+    if (hit.length) {
+      sculptPoint =
+        hit[0].point.clone();
+    } else if (!dragging) {
+      sculptPoint = null;
+    }
+
+    if (!dragging) {
       return;
-
-    // Only enable sculpting in Sculpting Room
-    if (currentRoom !== ROOM_STATE.SCULPT_ROOM)
-      return;
-
-
+    }
 
     const dx =
-      (e.clientX - lastX) * 0.003;
+      (e.clientX - lastX) *
+      0.003;
 
     let dy = 0;
 
     if (e.shiftKey) {
-
       dy =
-        (lastY - e.clientY)
-        * 0.005;
-
+        (lastY - e.clientY) *
+        0.005;
     }
-
 
     lastX = e.clientX;
     lastY = e.clientY;
 
-
     targetRadiusChange +=
-      dx * CLAY_RESISTANCE;
-
+      dx *
+      CLAY_RESISTANCE;
 
     if (e.shiftKey) {
-
       targetHeightChange +=
-        dy * CLAY_RESISTANCE;
-
+        dy *
+        CLAY_RESISTANCE;
     }
-
-
-    // limit input force
 
     targetRadiusChange =
       THREE.MathUtils.clamp(
         targetRadiusChange,
         -MAX_FORCE,
-        MAX_FORCE
+        MAX_FORCE,
       );
-
 
     targetHeightChange =
       THREE.MathUtils.clamp(
         targetHeightChange,
         -MAX_FORCE,
-        MAX_FORCE
+        MAX_FORCE,
       );
-
-  }
+  },
 );
 
+// ============================================================
+// CLAY DEFORMATION
+// ============================================================
 
-function deformClay(radiusChange, heightChange) {
-
-  if (!sculptPoint)
+function deformClay(
+  radiusChange,
+  heightChange,
+) {
+  if (!sculptPoint) {
     return;
-
+  }
 
   const pos =
     geometry.attributes.position;
-
 
   for (
     let i = 0;
     i < pos.count;
     i++
   ) {
-
     const ox =
-      clayPositions[i * 3];
+      clayPositions[
+        i * 3
+      ];
 
     const oy =
-      clayPositions[i * 3 + 1];
+      clayPositions[
+        i * 3 + 1
+      ];
 
     const oz =
-      clayPositions[i * 3 + 2];
+      clayPositions[
+        i * 3 + 2
+      ];
 
     const heightDistance =
       Math.abs(
-        oy - sculptPoint.y
+        oy -
+        sculptPoint.y,
       );
 
-
-    if (heightDistance > BRUSH_HEIGHT)
+    if (
+      heightDistance >
+      BRUSH_HEIGHT
+    ) {
       continue;
-
+    }
 
     const brushStrength =
       1 -
-      (heightDistance / BRUSH_HEIGHT);
+      heightDistance /
+        BRUSH_HEIGHT;
 
-    const normalized =
-      THREE.MathUtils.clamp(
-        oy / INITIAL_HEIGHT,
-        0,
-        1
-      );
-
-
-    const influence = 1;
-
-
-    // radius
     const radius =
       Math.sqrt(
         ox * ox +
-        oz * oz
+        oz * oz,
       );
-
 
     const angle =
       Math.atan2(
         oz,
-        ox
+        ox,
       );
-
 
     const deformation =
       THREE.MathUtils.clamp(
         radiusChange *
-        influence *
-        brushStrength *
-        3,
+          brushStrength *
+          3,
         -0.003,
-        0.003
+        0.003,
       );
-
 
     const newRadius =
       radius *
-      (
-        1 + deformation
-      );
-
+      (1 + deformation);
 
     const heightScale =
       1 +
       heightChange *
-      brushStrength *
-      8;
-
+        brushStrength *
+        8;
 
     const newY =
       oy *
       heightScale;
 
-
     pos.setX(
       i,
-      Math.cos(angle) * newRadius
+      Math.cos(angle) *
+        newRadius,
     );
-
 
     pos.setZ(
       i,
-      Math.sin(angle) * newRadius
+      Math.sin(angle) *
+        newRadius,
     );
-
 
     pos.setY(
       i,
       THREE.MathUtils.clamp(
         newY,
         0,
-        MAX_HEIGHT
-      )
+        MAX_HEIGHT,
+      ),
     );
-
   }
-
 
   pos.needsUpdate = true;
 
@@ -862,52 +1187,43 @@ function deformClay(radiusChange, heightChange) {
   }
 
   geometry.computeVertexNormals();
-
 }
+
+// ============================================================
+// GESTURE DETECTION
+// ============================================================
 
 function isOpenPalm(hand) {
-
   return (
-    hand[8].y < hand[6].y && // index
-    hand[12].y < hand[10].y && // middle
-    hand[16].y < hand[14].y && // ring
-    hand[20].y < hand[18].y    // pinky
+    hand[8].y <
+      hand[6].y &&
+    hand[12].y <
+      hand[10].y &&
+    hand[16].y <
+      hand[14].y &&
+    hand[20].y <
+      hand[18].y
   );
-
 }
 
-// =====================
-// Animation
-// =====================
-
-function updateClay() {
-
-  deformClay(
-    targetRadiusChange,
-    targetHeightChange
-  );
-
-
-  // consume input
-  targetRadiusChange = 0;
-  targetHeightChange = 0;
-
-}
-
-function isHeightGesture(hand) {
-
+function isHeightGesture(
+  hand,
+) {
   const indexOpen =
-    hand[8].y < hand[6].y;
+    hand[8].y <
+    hand[6].y;
 
   const middleOpen =
-    hand[12].y < hand[10].y;
+    hand[12].y <
+    hand[10].y;
 
   const ringClosed =
-    hand[16].y > hand[14].y;
+    hand[16].y >
+    hand[14].y;
 
   const pinkyClosed =
-    hand[20].y > hand[18].y;
-
+    hand[20].y >
+    hand[18].y;
 
   return (
     indexOpen &&
@@ -917,26 +1233,54 @@ function isHeightGesture(hand) {
   );
 }
 
-function getPinchStrength(hand) {
+function isPointingGesture(
+  hand,
+) {
+  const indexOpen =
+    hand[8].y <
+    hand[6].y;
 
+  const middleClosed =
+    hand[12].y >
+    hand[10].y;
+
+  const ringClosed =
+    hand[16].y >
+    hand[14].y;
+
+  const pinkyClosed =
+    hand[20].y >
+    hand[18].y;
+
+  return (
+    indexOpen &&
+    middleClosed &&
+    ringClosed &&
+    pinkyClosed
+  );
+}
+
+function getPinchStrength(
+  hand,
+) {
   const thumb =
     new THREE.Vector3(
       hand[4].x,
       hand[4].y,
-      hand[4].z
+      hand[4].z,
     );
-
 
   const index =
     new THREE.Vector3(
       hand[8].x,
       hand[8].y,
-      hand[8].z
+      hand[8].z,
     );
 
-
   const distance =
-    thumb.distanceTo(index);
+    thumb.distanceTo(
+      index,
+    );
 
   return THREE.MathUtils.clamp(
     THREE.MathUtils.mapLinear(
@@ -944,266 +1288,449 @@ function getPinchStrength(hand) {
       0.02,
       0.15,
       1,
-      0
+      0,
     ),
     0,
-    1
+    1,
   );
-
 }
 
+// ============================================================
+// GESTURE INPUT
+// ============================================================
+
+function updateHandInput(
+  hand,
+) {
+  if (
+    currentRoom !==
+    ROOM_STATE.SCULPT_ROOM
+  ) {
+    sculptPoint = null;
+    return;
+  }
+
+  const index = hand[8];
+
+  const pinch =
+    getPinchStrength(hand);
+
+  const heightGesture =
+    isHeightGesture(hand);
+
+  const openPalm =
+    isOpenPalm(hand);
+
+  const pointing =
+    isPointingGesture(hand);
+
+  // ==========================================================
+  // PINCH
+  // ==========================================================
+
+  if (pinch > 0.5) {
+    updateGestureHUD(
+      "Adjusting Radius",
+      "minimize-2",
+    );
+
+    lastHeightY = null;
+
+    if (!pinchActive) {
+      pinchActive = true;
+      pinchStartX =
+        index.x;
+    }
+
+    const movement =
+      index.x -
+      pinchStartX;
+
+    targetRadiusChange =
+      movement *
+      pinch *
+      CLAY_RESISTANCE;
+
+    targetRadiusChange =
+      THREE.MathUtils.clamp(
+        targetRadiusChange,
+        -MAX_FORCE,
+        MAX_FORCE,
+      );
+  } else {
+    pinchActive = false;
+  }
+
+  // ==========================================================
+  // HEIGHT
+  // ==========================================================
+
+  if (
+    heightGesture &&
+    pinch <= 0.5
+  ) {
+    updateGestureHUD(
+      "Stretching Height",
+      "maximize-2",
+    );
+
+    const middle =
+      hand[12];
+
+    if (
+      lastHeightY !== null
+    ) {
+      const movement =
+        lastHeightY -
+        middle.y;
+
+      targetHeightChange +=
+        movement *
+        CLAY_RESISTANCE;
+
+      targetHeightChange =
+        THREE.MathUtils.clamp(
+          targetHeightChange,
+          -MAX_FORCE,
+          MAX_FORCE,
+        );
+    }
+
+    lastHeightY =
+      middle.y;
+  } else {
+    lastHeightY = null;
+  }
+
+  // ==========================================================
+  // OPEN PALM
+  // ==========================================================
+
+  if (
+    openPalm &&
+    pinch <= 0.5 &&
+    !heightGesture
+  ) {
+    updateGestureHUD(
+      "Rotating Camera",
+      "edit-3",
+    );
+
+    const palmY =
+      (
+        hand[0].y +
+        hand[5].y +
+        hand[9].y +
+        hand[13].y +
+        hand[17].y
+      ) / 5;
+
+    targetCameraAngle =
+      THREE.MathUtils.mapLinear(
+        palmY,
+        0.2,
+        0.8,
+        -0.2,
+        1.2,
+      );
+  }
+
+  // ==========================================================
+  // POINTING
+  // ==========================================================
+
+  if (
+    pointing &&
+    pinch <= 0.5 &&
+    !heightGesture &&
+    !openPalm
+  ) {
+    updateGestureHUD(
+      "Sculpting Point Active",
+      "target",
+    );
+  }
+
+  // ==========================================================
+  // FINGER RAYCAST
+  // ==========================================================
+
+  mouse.x =
+    1 -
+    index.x * 2;
+
+  mouse.y =
+    1 -
+    index.y * 2;
+
+  raycaster.setFromCamera(
+    mouse,
+    camera,
+  );
+
+  const hit =
+    raycaster.intersectObject(
+      pot,
+    );
+
+  if (hit.length) {
+    sculptPoint =
+      hit[0].point.clone();
+
+    const normal =
+      hit[0].face.normal.clone();
+
+    normal.transformDirection(
+      pot.matrixWorld,
+    );
+
+    targetFinger.copy(
+      hit[0].point,
+    );
+
+    targetFinger.addScaledVector(
+      normal,
+      0.03,
+    );
+  } else {
+    sculptPoint = null;
+  }
+}
+
+// ============================================================
+// CLAY UPDATE
+// ============================================================
+
+function updateClay() {
+  const radiusInput =
+    Math.abs(
+      targetRadiusChange,
+    );
+
+  const heightInput =
+    Math.abs(
+      targetHeightChange,
+    );
+
+  const inputStrength =
+    THREE.MathUtils.clamp(
+      (
+        radiusInput +
+        heightInput
+      ) /
+        (MAX_FORCE * 2),
+      0,
+      1,
+    );
+
+  if (
+    radiusInput > 0 ||
+    heightInput > 0
+  ) {
+    deformClay(
+      targetRadiusChange,
+      targetHeightChange,
+    );
+
+    updateSculptSound(
+      inputStrength,
+    );
+  } else {
+    stopSculptSound();
+  }
+
+  targetRadiusChange = 0;
+  targetHeightChange = 0;
+}
+
+// ============================================================
+// ANIMATION
+// ============================================================
 
 function animate() {
-
   requestAnimationFrame(
-    animate
-  );
-  const hand = detectHand(
-    video,
-    performance.now()
+    animate,
   );
 
+  const hand =
+    detectHand(
+      video,
+      performance.now(),
+    );
 
   if (hand) {
+    // --------------------------------------------------------
+    // DEBUG HAND
+    // --------------------------------------------------------
 
-    const index =
-      hand[8];
-    const pinch =
-      getPinchStrength(hand);
-
-    if (DEBUG) {
-
-
+    if (
+      DEBUG &&
+      debugCtx
+    ) {
       debugCtx.clearRect(
         0,
         0,
         debugCanvas.width,
-        debugCanvas.height
+        debugCanvas.height,
       );
 
-      debugCtx.strokeStyle = "lime";
-      debugCtx.fillStyle = "red";
+      debugCtx.strokeStyle =
+        "lime";
+
+      debugCtx.fillStyle =
+        "red";
+
       debugCtx.lineWidth = 2;
 
-      for (const p of hand) {
+      for (
+        const p of hand
+      ) {
+        const x =
+          (1 - p.x) *
+          debugCanvas.width;
 
-        const x = (1 - p.x) * debugCanvas.width;
-        const y = p.y * debugCanvas.height;
+        const y =
+          p.y *
+          debugCanvas.height;
 
         debugCtx.beginPath();
+
         debugCtx.arc(
           x,
           y,
           4,
           0,
-          Math.PI * 2
+          Math.PI * 2,
         );
-        debugCtx.fill();
 
+        debugCtx.fill();
       }
 
-      debugCtx.strokeStyle = "cyan";
+      debugCtx.strokeStyle =
+        "cyan";
 
-      for (const [a, b] of HAND_CONNECTIONS) {
-
+      for (
+        const [a, b]
+        of HAND_CONNECTIONS
+      ) {
         debugCtx.beginPath();
 
         debugCtx.moveTo(
-          (1 - hand[a].x) * debugCanvas.width,
-          hand[a].y * debugCanvas.height
+          (1 - hand[a].x) *
+            debugCanvas.width,
+
+          hand[a].y *
+            debugCanvas.height,
         );
 
         debugCtx.lineTo(
-          (1 - hand[b].x) * debugCanvas.width,
-          hand[b].y * debugCanvas.height
+          (1 - hand[b].x) *
+            debugCanvas.width,
+
+          hand[b].y *
+            debugCanvas.height,
         );
 
         debugCtx.stroke();
-
       }
     }
 
-    if (pinch > 0.5) {
-      lastHeightY = null;
-      if (!pinchActive) {
+    // --------------------------------------------------------
+    // PROCESS HAND ONCE
+    // --------------------------------------------------------
 
-        pinchActive = true;
-        pinchStartX = index.x;
-
-      }
-
-
-      const movement =
-        index.x - pinchStartX;
-
-
-      targetRadiusChange =
-        movement *
-        pinch *
-        CLAY_RESISTANCE;
-
-
-    }
-    else {
-
-      pinchActive = false;
-
-    }
-
-    if (isHeightGesture(hand)) {
-
-
-      const middle =
-        hand[12];
-
-
-      if (lastHeightY !== null) {
-
-        const movement =
-          lastHeightY - middle.y;
-
-
-        targetHeightChange +=
-          movement *
-          CLAY_RESISTANCE;
-
-
-        targetHeightChange =
-          THREE.MathUtils.clamp(
-            targetHeightChange,
-            -MAX_FORCE,
-            MAX_FORCE
-          );
-
-      }
-
-
-      lastHeightY = middle.y;
-
-
-    }
-    else {
-
-      lastHeightY = null;
-
-    }
-
-    if (isOpenPalm(hand)) {
-
-      const palmY =
-        (
-          hand[0].y +
-          hand[5].y +
-          hand[9].y +
-          hand[13].y +
-          hand[17].y
-        ) / 5;
-
-
-      targetCameraAngle =
-        THREE.MathUtils.mapLinear(
-          palmY,
-          0.2,
-          0.8,
-          -0.2,
-          1.2
-        );
-
-    }
-
-
-    mouse.x =
-      1 - index.x * 2;
-
-    mouse.y =
-      1 - index.y * 2;
-
-    raycaster.setFromCamera(
-      mouse,
-      camera
+    updateHandInput(
+      hand,
     );
 
-    const hit =
-      raycaster.intersectObject(
-        pot
-      );
+    finger.position.lerp(
+      targetFinger,
+      0.2,
+    );
+  } else {
+    lastHeightY = null;
+    pinchActive = false;
 
-    if (hit.length) {
+    updateGestureHUD(
+      "Waiting for hand gesture...",
+      "activity",
+    );
 
-      sculptPoint =
-        hit[0].point.clone();
-
-
-      const normal =
-        hit[0].face.normal.clone();
-
-      normal.transformDirection(
-        pot.matrixWorld
-      );
-
-
-      targetFinger.copy(
-        hit[0].point
-      );
-
-
-      targetFinger.addScaledVector(
-        normal,
-        0.03
-      );
-
-    }
-    else {
-
-      sculptPoint = null;
-
-    }
-
-    if (finger) {
-
-      finger.position.lerp(
-        targetFinger,
-        0.2
-      );
-
-    }
-
+    stopSculptSound();
   }
 
+  // ==========================================================
+  // CAMERA
+  // ==========================================================
+
   cameraAngle +=
-    (targetCameraAngle - cameraAngle)
-    * 0.1;
+    (
+      targetCameraAngle -
+      cameraAngle
+    ) * 0.1;
 
   updateCamera();
 
+  // ==========================================================
+  // CLAY
+  // ==========================================================
+
   updateClay();
 
+  // ==========================================================
+  // POTTERY WHEEL
+  // ==========================================================
 
-  // Only spin pottery wheel in Sculpting Room
-  if (currentRoom === ROOM_STATE.SCULPT_ROOM) {
-    pot.rotation.y += 0.005;
+  if (
+    currentRoom ===
+    ROOM_STATE.SCULPT_ROOM
+  ) {
+    const time =
+      performance.now() *
+      0.001;
+
+    const WHEEL_BASE_SPEED =
+      0.5;
+
+    const WHEEL_WAVE =
+      Math.sin(
+        time * 0.7,
+      ) * 0.08;
+
+    const WHEEL_SPEED =
+      WHEEL_BASE_SPEED +
+      WHEEL_WAVE;
+
+    pot.rotation.y +=
+      WHEEL_SPEED;
+
+    updateWheelSound(
+      WHEEL_SPEED /
+        WHEEL_BASE_SPEED,
+    );
+  } else {
+    updateWheelSound(0);
   }
 
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   renderer.render(
     scene,
-    camera
+    camera,
   );
-
 }
-
 
 animate();
 
-
-// =====================
-// Resize
-// =====================
+// ============================================================
+// RESIZE
+// ============================================================
 
 window.addEventListener(
   "resize",
   () => {
-
     camera.aspect =
       window.innerWidth /
       window.innerHeight;
@@ -1212,8 +1739,7 @@ window.addEventListener(
 
     renderer.setSize(
       window.innerWidth,
-      window.innerHeight
+      window.innerHeight,
     );
-
-  }
+  },
 );

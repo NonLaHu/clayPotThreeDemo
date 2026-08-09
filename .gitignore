@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Booth save files
+saves/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

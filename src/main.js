@@ -11,6 +11,9 @@ import {
   updateGestureGuide,
 } from "./UI/ui.js";
 
+import { createSaveFlow } from "./save/saveFlow.js";
+import { restorePotFromSave } from "./save/restorePot.js";
+
 import {
   initSound,
   resumeSound,
@@ -411,6 +414,25 @@ function transitionToPaintRoom() {
 // UI
 // ============================================================
 
+const saveFlow = createSaveFlow({
+  renderer,
+  scene,
+  camera,
+  geometry,
+  getCameraAngle: () => cameraAngle,
+  onRestore: (save) => {
+    restorePotFromSave(save, geometry);
+
+    const pos = geometry.attributes.position;
+
+    for (let i = 0; i < pos.count * 3; i++) {
+      clayPositions[i] = pos.array[i];
+    }
+
+    updateGestureHUD("Save loaded", "check");
+  },
+});
+
 initUI({
   // ----------------------------------------------------------
   // RESET
@@ -442,18 +464,23 @@ initUI({
   // EXPORT
   // ----------------------------------------------------------
 
-  onExport: () => {
-    renderer.render(scene, camera);
+  onExport: async () => {
+    saveFlow.exportCurrentWork().catch((error) => {
+      console.error("Save export failed:", error);
 
-    const image = renderer.domElement.toDataURL("image/png");
+      const detail = error && error.message ? ` (${error.message})` : "";
+      window.alert(`Could not save / export your pot. Please try again.${detail}`);
+    });
+  },
 
-    const link = document.createElement("a");
+  // ----------------------------------------------------------
+  // LOAD PROGRESS
+  // ----------------------------------------------------------
 
-    link.download = `clay-pot-${Date.now()}.png`;
-
-    link.href = image;
-
-    link.click();
+  onLoad: () => {
+    saveFlow.loadByCode().catch((error) => {
+      console.error("Load progress failed:", error);
+    });
   },
 
   // ----------------------------------------------------------
@@ -527,6 +554,8 @@ const paintHighlight = new THREE.Mesh(
   paintHighlightMaterial,
 );
 
+paintHighlight.userData.hideInPoster = true;
+
 paintHighlight.visible = false;
 
 scene.add(paintHighlight);
@@ -566,6 +595,8 @@ const finger = new THREE.Mesh(
     color: 0xff0000,
   }),
 );
+
+finger.userData.hideInPoster = true;
 
 scene.add(finger);
 

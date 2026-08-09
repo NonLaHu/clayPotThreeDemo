@@ -2,6 +2,73 @@ import "./ui.css";
 
 let currentIcon = "activity";
 
+const SCULPT_ROOM = "sculpt_room";
+const PAINT_ROOM = "paint_room";
+
+const GESTURE_GUIDES = {
+  [SCULPT_ROOM]: [
+    {
+      title: "Point Finger",
+      desc: "Aim the sculpting point on the pot",
+    },
+    {
+      title: "Pinch (Thumb + Index)",
+      desc: "Adjust pot radius / thickness",
+    },
+    {
+      title: "Victory Sign (Index + Middle)",
+      desc: "Stretch or compress height",
+    },
+    {
+      title: "Open Palm",
+      desc: "Tilt & rotate camera view",
+    },
+  ],
+  [PAINT_ROOM]: [
+    {
+      title: "Point Finger",
+      desc: "Aim the paint height on the pot",
+    },
+    {
+      title: "Pinch (Thumb + Index)",
+      desc: "Paint a horizontal band of the selected color",
+    },
+    {
+      title: "Spider-Man (Index + Pinky)",
+      desc: "Toggle the sunflower color picker",
+    },
+    {
+      title: "Rotate Hand",
+      desc: "Sweep the color wheel to pick a color",
+    },
+    {
+      title: "Open Palm",
+      desc: "Tilt & rotate camera view",
+    },
+  ],
+};
+
+function renderGestureGuide(room) {
+  const items = GESTURE_GUIDES[room] || GESTURE_GUIDES[SCULPT_ROOM];
+
+  return `
+    <div class="dropdown-header">Supported Controls</div>
+
+    ${items
+      .map(
+        (item) => `
+          <div class="gesture-item">
+            <div>
+              <strong>${item.title}</strong>
+              <span>${item.desc}</span>
+            </div>
+          </div>
+        `,
+      )
+      .join("")}
+  `;
+}
+
 export function initUI({
   onReset,
   onExport,
@@ -59,76 +126,7 @@ export function initUI({
         <div
           id="gesture-menu"
           class="hud-dropdown"
-        >
-
-          <div class="dropdown-header">
-            Supported Controls
-          </div>
-
-
-          <div class="gesture-item">
-
-            <i data-feather="target"></i>
-
-            <div>
-              <strong>Point Finger</strong>
-              <span>
-                Sculpt / Deform specific point
-              </span>
-            </div>
-
-          </div>
-
-
-          <div class="gesture-item">
-
-            <i data-feather="minimize-2"></i>
-
-            <div>
-              <strong>
-                Pinch (Thumb + Index)
-              </strong>
-
-              <span>
-                Adjust pot radius / thickness
-              </span>
-            </div>
-
-          </div>
-
-
-          <div class="gesture-item">
-
-            <i data-feather="maximize-2"></i>
-
-            <div>
-              <strong>
-                Victory Sign (Index + Middle)
-              </strong>
-
-              <span>
-                Stretch or compress height
-              </span>
-            </div>
-
-          </div>
-
-
-          <div class="gesture-item">
-
-            <i data-feather="edit-3"></i>
-
-            <div>
-              <strong>Open Palm</strong>
-
-              <span>
-                Tilt & rotate camera view
-              </span>
-            </div>
-
-          </div>
-
-        </div>
+        ></div>
 
       </div>
 
@@ -244,6 +242,15 @@ export function initUI({
     document.getElementById(
       "gesture-menu",
     );
+
+  menu.innerHTML =
+    renderGestureGuide(
+      SCULPT_ROOM,
+    );
+
+  if (window.feather) {
+    window.feather.replace();
+  }
 
 
   menuBtn.addEventListener(
@@ -420,5 +427,29 @@ export function updateGestureHUD(
     if (window.feather) {
       window.feather.replace();
     }
+  }
+}
+
+// =========================
+// Gesture Guide (per room)
+// =========================
+
+export function updateGestureGuide(
+  room,
+) {
+  const menu =
+    document.getElementById(
+      "gesture-menu",
+    );
+
+  if (!menu) {
+    return;
+  }
+
+  menu.innerHTML =
+    renderGestureGuide(room);
+
+  if (window.feather) {
+    window.feather.replace();
   }
 }

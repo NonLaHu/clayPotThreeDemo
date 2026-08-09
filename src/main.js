@@ -5,7 +5,11 @@ import { setupEnvironment } from "./environment.js";
 import { setupPaintingEnvironment } from "./paintingEnvironment.js";
 import { initHand, detectHand } from "./hand.js";
 
-import { initUI, updateGestureHUD } from "./UI/ui.js";
+import {
+  initUI,
+  updateGestureHUD,
+  updateGestureGuide,
+} from "./UI/ui.js";
 
 import {
   initSound,
@@ -378,6 +382,12 @@ function transitionToPaintRoom() {
     if (paintingDoneButton) {
       paintingDoneButton.classList.add("visible");
     }
+
+    // --------------------------------------------------------
+    // Swap gesture guide to painting gestures
+    // --------------------------------------------------------
+
+    updateGestureGuide(ROOM_STATE.PAINT_ROOM);
 
     // --------------------------------------------------------
     // Change room

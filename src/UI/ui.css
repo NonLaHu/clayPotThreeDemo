@@ -111,14 +111,6 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
-.gesture-item svg {
-  width: 18px;
-  height: 18px;
-  margin-top: 2px;
-  color: #d87c46; /* Clay studio terracotta accent */
-  flex-shrink: 0;
-}
-
 .gesture-item div {
   display: flex;
   flex-direction: column;

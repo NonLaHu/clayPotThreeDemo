@@ -74,6 +74,7 @@ export function initUI({
   onExport,
   onSoundToggle,
   onDone,
+  onLoad,
 }) {
   if (document.getElementById("ui-overlay")) return;
 
@@ -176,6 +177,18 @@ export function initUI({
       </button>
 
 
+      <!-- Load Progress -->
+
+      <button
+        id="btn-load"
+        class="hud-btn"
+        title="Load a saved pot by code"
+      >
+        <i data-feather="upload-cloud"></i>
+        <span>Load Progress</span>
+      </button>
+
+
       <!-- Export -->
 
       <button
@@ -218,6 +231,14 @@ export function initUI({
     .addEventListener(
       "click",
       onExport,
+    );
+
+
+  document
+    .getElementById("btn-load")
+    .addEventListener(
+      "click",
+      onLoad,
     );
 
 

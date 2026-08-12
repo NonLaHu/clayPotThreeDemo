@@ -964,7 +964,7 @@ function getPinchStrength(hand) {
   // 1. Tightened range: 0.015 (touching) to 0.05 (very close)
   // Adjust 0.05 up or down slightly depending on your webcam sensitivity
   const linearStrength = THREE.MathUtils.clamp(
-    THREE.MathUtils.mapLinear(distance, 0.015, 0.05, 1, 0),
+    THREE.MathUtils.mapLinear(distance, 0.015, 0.1, 1, 0),
     0,
     1,
   );

@@ -1,5 +1,8 @@
 import * as THREE from "three";
 
+// DEBUG
+export const DEBUG = true;
+
 // ROOM
 export const ROOM_STATE = {
   SCULPT_ROOM: "sculpt_room",

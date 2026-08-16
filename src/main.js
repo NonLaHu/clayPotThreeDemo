@@ -5,6 +5,11 @@ import { setupEnvironment } from "./environment.js";
 import { setupPaintingEnvironment } from "./paintingEnvironment.js";
 import { initHand, detectHand } from "./hand.js";
 
+import {
+  initDebug,
+  getDebugVideo,
+  drawHand,
+} from "./debug/debug.js";
 import { state } from "./core/state.js";
 import {
   ROOM_STATE,
@@ -12,12 +17,12 @@ import {
   COLOR,
   CLAY_POT,
   SCULPT,
-  HAND_CONNECTIONS,
   COLOR_COUNT,
   raycaster,
   mouse
 } from "./core/constants.js";
 
+import { transitionToPaintRoom } from "./rooms/roomcontroller.js"
 import { create, ground, paintHighlight, targetFinger, finger, light } from "./scene/create.js";
 import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
@@ -39,9 +44,6 @@ import {
 
 const DEBUG = true;
 
-let sculptingEnvironmentGroup = null;
-let paintingEnvironmentGroup = null;
-
 // inital status-----------------
 paintHighlight.userData.hideInPoster = true;
 paintHighlight.visible = false;
@@ -54,56 +56,17 @@ light.shadow.mapSize.width = 1024;
 light.shadow.mapSize.height = 1024;
 light.shadow.camera.near = 0.5;
 light.shadow.camera.far = 50;
-//---------------------------
-
-// DEBUG CAMERA VIDEO
-const video = document.createElement("video");
-
-video.autoplay = true;
-video.playsInline = true;
-video.muted = true;
-
-if (DEBUG) {
-  video.style.position = "fixed";
-  video.style.bottom = "10px";
-  video.style.right = "10px";
-  video.style.width = "320px";
-  video.style.zIndex = "9999";
-  video.style.transform = "scaleX(-1)";
-
-  document.body.appendChild(video);
-}
-
-
-// DEBUG CANVAS
-let debugCanvas;
-let debugCtx;
-
-if (DEBUG) {
-  debugCanvas = document.createElement("canvas");
-
-  debugCanvas.width = 320;
-  debugCanvas.height = 240;
-
-  debugCanvas.style.position = "fixed";
-  debugCanvas.style.bottom = "10px";
-  debugCanvas.style.right = "10px";
-  debugCanvas.style.zIndex = "10000";
-  debugCanvas.style.pointerEvents = "none";
-
-  document.body.appendChild(debugCanvas);
-
-  debugCtx = debugCanvas.getContext("2d");
-}
 
 // CAMERA / WEBCAM
 async function startCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      width: 640,
-      height: 480,
-    },
-  });
+  const video = getDebugVideo();
+  const stream =
+    await navigator.mediaDevices.getUserMedia({
+      video: {
+        width: 640,
+        height: 480,
+      },
+    });
 
   video.srcObject = stream;
 
@@ -117,15 +80,15 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
 
 // SCULPTING ENVIRONMENT
-sculptingEnvironmentGroup = new THREE.Group();
-setupEnvironment(sculptingEnvironmentGroup);
-scene.add(sculptingEnvironmentGroup);
+state.rooms.sculptingEnvironmentGroup = new THREE.Group();
+setupEnvironment(state.rooms.sculptingEnvironmentGroup);
+scene.add(state.rooms.sculptingEnvironmentGroup);
 
 // PAINTING ENVIRONMENT
-paintingEnvironmentGroup = new THREE.Group();
-setupPaintingEnvironment(paintingEnvironmentGroup);
-paintingEnvironmentGroup.visible = false;
-scene.add(paintingEnvironmentGroup);
+state.rooms.paintingEnvironmentGroup = new THREE.Group();
+setupPaintingEnvironment(state.rooms.paintingEnvironmentGroup);
+state.rooms.paintingEnvironmentGroup.visible = false;
+scene.add(state.rooms.paintingEnvironmentGroup);
 
 // CAMERA
 const camera = new THREE.PerspectiveCamera(
@@ -170,63 +133,6 @@ initSound();
 // CLAY
 const initialClayPositions = geometry.attributes.position.array.slice();
 const clayPositions = geometry.attributes.position.array.slice();
-
-// TRANSITION: SCULPT -> PAINT
-function transitionToPaintRoom() {
-  if (state.room !== ROOM_STATE.SCULPT_ROOM) {
-    return;
-  }
-
-  const transitionOverlay = document.getElementById("transition-overlay");
-
-  const colorSelector = document.getElementById("color-selector");
-
-  const paintingControls = document.getElementById("painting-controls");
-
-  const paintingDoneButton = document.getElementById("painting-done-button");
-
-  if (transitionOverlay) {
-    transitionOverlay.classList.add("active");
-  }
-
-  setTimeout(() => {
-    // Hide sculpt room
-    sculptingEnvironmentGroup.visible = false;
-
-    // Show paint room
-    paintingEnvironmentGroup.visible = true;
-
-    // Stop sculpting audio
-    updateWheelSound(0);
-    stopSculptSound();
-
-    // Painting UI
-    if (colorSelector) {
-      colorSelector.classList.add("visible");
-    }
-
-    if (paintingControls) {
-      paintingControls.classList.add("visible");
-    }
-
-    if (paintingDoneButton) {
-      paintingDoneButton.classList.add("visible");
-    }
-
-    // Swap gesture guide to painting gestures
-    updateGestureGuide(ROOM_STATE.PAINT_ROOM);
-
-    // Change room
-    state.room = ROOM_STATE.PAINT_ROOM;
-
-    // Finish fade
-    setTimeout(() => {
-      if (transitionOverlay) {
-        transitionOverlay.classList.remove("active");
-      }
-    }, 100);
-  }, 500);
-}
 
 // UI
 const saveFlow = createSaveFlow({
@@ -328,19 +234,15 @@ async function setup() {
   }
 }
 
+initDebug();
 setup();
 
 // PAINTING UI
 const transitionOverlay = document.getElementById("transition-overlay");
-
 const colorSelector = document.getElementById("color-selector");
-
 const paintingControls = document.getElementById("painting-controls");
-
 const paintingDoneButton = document.getElementById("painting-done-button");
-
 const sunflowerWheel = document.querySelector(".sunflower-wheel");
-
 const petalColors = [
   0xff4500, 0xdc143c, 0xffd700, 0x808000, 0x87ceeb, 0x008080, 0x4b0082,
   0x800080, 0xe6e6fa, 0x4a3728, 0x36454f, 0xfff8dc,
@@ -357,38 +259,23 @@ if (paintingDoneButton) {
 if (sunflowerWheel) {
   petalColors.forEach((color, index) => {
     const petal = document.createElement("div");
-
     petal.className = "petal";
-
     petal.style.backgroundColor = COLOR[index];
-
     petal.dataset.color = COLOR[index];
-
     const angle = (index / petalColors.length) * Math.PI * 2;
-
     const radius = 70;
-
     const x = 100 + Math.cos(angle) * radius - 20;
-
     const y = 100 + Math.sin(angle) * radius - 30;
-
     petal.style.left = x + "px";
-
     petal.style.top = y + "px";
-
     petal.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
-
     petal.addEventListener("click", () => {
       document.querySelectorAll(".petal").forEach((p) => {
         p.classList.remove("selected");
       });
-
       petal.classList.add("selected");
-
       state.paint.selectedColor = COLOR[index];
-
       const center = document.querySelector(".sunflower-center");
-
       if (center) {
         center.style.background = `radial-gradient(
                 circle,
@@ -396,19 +283,14 @@ if (sunflowerWheel) {
                 ${adjustColorBrightness(state.paint.selectedColor, -20)} 100%
               )`;
       }
-
       const preview = document.querySelector(".color-preview");
-
       if (preview) {
         preview.style.background = state.paint.selectedColor;
       }
     });
-
     sunflowerWheel.appendChild(petal);
   });
 }
-
-
 
 // INITIAL COLOR PREVIEW
 const sunflowerCenter = document.querySelector(".sunflower-center");
@@ -421,20 +303,15 @@ if (sunflowerCenter) {
     )`;
 }
 
-
-
 // CLAY UPDATE
 function updateClay() {
   const radiusInput = Math.abs(state.sculpt.targetRadiusChange);
-
   const heightInput = Math.abs(state.sculpt.targetHeightChange);
-
   const inputStrength = THREE.MathUtils.clamp(
     (radiusInput + heightInput) / (SCULPT.MAX_FORCE * 2),
     0,
     1,
   );
-
   if (radiusInput > 0 || heightInput > 0) {
     deformClay(
       geometry,
@@ -442,12 +319,10 @@ function updateClay() {
       state.sculpt.targetRadiusChange,
       state.sculpt.targetHeightChange,
     );
-
     updateSculptSound(inputStrength);
   } else {
     stopSculptSound();
   }
-
   state.sculpt.targetRadiusChange = 0;
   state.sculpt.targetHeightChange = 0;
 }
@@ -455,53 +330,11 @@ function updateClay() {
 // ANIMATION
 function animate() {
   requestAnimationFrame(animate);
-
+  const video = getDebugVideo();
   const hand = detectHand(video, performance.now());
-
   if (hand && hand.length >= 21) {
     // DEBUG HAND
-
-    if (DEBUG && debugCtx) {
-      debugCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
-
-      debugCtx.strokeStyle = "lime";
-
-      debugCtx.fillStyle = "red";
-
-      debugCtx.lineWidth = 2;
-
-      for (const p of hand) {
-        const x = (1 - p.x) * debugCanvas.width;
-
-        const y = p.y * debugCanvas.height;
-
-        debugCtx.beginPath();
-
-        debugCtx.arc(x, y, 4, 0, Math.PI * 2);
-
-        debugCtx.fill();
-      }
-
-      debugCtx.strokeStyle = "cyan";
-
-      for (const [a, b] of HAND_CONNECTIONS) {
-        debugCtx.beginPath();
-
-        debugCtx.moveTo(
-          (1 - hand[a].x) * debugCanvas.width,
-
-          hand[a].y * debugCanvas.height,
-        );
-
-        debugCtx.lineTo(
-          (1 - hand[b].x) * debugCanvas.width,
-
-          hand[b].y * debugCanvas.height,
-        );
-
-        debugCtx.stroke();
-      }
-    }
+    drawHand(hand);
 
     // PROCESS HAND ONCE
     updateHandInput({
@@ -517,15 +350,12 @@ function animate() {
   } else {
     state.sculpt.lastHeightY = null;
     state.sculpt.pinchActive = false;
-
     updateGestureHUD("Waiting for hand gesture...", "activity");
-
     stopSculptSound();
   }
 
   // CAMERA
   state.camera.angle += (state.camera.targetAngle - state.camera.angle) * 0.1;
-
   updateCamera();
 
   // CLAY

@@ -3,18 +3,89 @@ import "./saveOverlay.css";
 import { encodeToDataURL, makeSaveUrl } from "./qr.js";
 import { formatSaveCode } from "./code.js";
 
-let overlay = null;
+let choiceOverlay = null;
+let qrOverlay = null;
 
-function buildOverlay() {
-  if (overlay) {
-    return overlay;
+// ------------------------------------------------------------
+// Choice popup: QR Code | Print
+// ------------------------------------------------------------
+
+function buildChoiceOverlay() {
+  if (choiceOverlay) return choiceOverlay;
+
+  choiceOverlay = document.createElement("div");
+  choiceOverlay.id = "export-choice-overlay";
+  choiceOverlay.className = "save-export";
+
+  choiceOverlay.innerHTML = `
+    <div class="save-export-card">
+      <button class="save-export-close" type="button" aria-label="Close">&times;</button>
+      <h2 class="save-export-title">Export your work</h2>
+      <p class="save-export-hint">
+        Choose how you'd like to save your pot.
+      </p>
+      <div class="export-choice-btns">
+        <button class="export-choice-btn" id="export-qr-btn" type="button">
+          <i data-feather="smartphone"></i>
+          <span>QR Code</span>
+        </button>
+        <button class="export-choice-btn" id="export-print-btn" type="button">
+          <i data-feather="printer"></i>
+          <span>Print</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  choiceOverlay.addEventListener("click", (e) => {
+    if (e.target === choiceOverlay) hideChoiceOverlay();
+  });
+
+  choiceOverlay.querySelector(".save-export-close")
+    .addEventListener("click", hideChoiceOverlay);
+
+  document.body.appendChild(choiceOverlay);
+  return choiceOverlay;
+}
+
+export function showExportChoice({ onQR, onPrint }) {
+  const el = buildChoiceOverlay();
+  el.classList.add("open");
+
+  if (window.feather) {
+    window.feather.replace();
   }
 
-  overlay = document.createElement("div");
-  overlay.id = "save-export-overlay";
-  overlay.className = "save-export";
+  el.querySelector("#export-qr-btn").onclick = () => {
+    hideChoiceOverlay();
+    if (typeof onQR === "function") onQR();
+  };
 
-  overlay.innerHTML = `
+  el.querySelector("#export-print-btn").onclick = () => {
+    hideChoiceOverlay();
+    if (typeof onPrint === "function") onPrint();
+  };
+
+  return () => hideChoiceOverlay();
+}
+
+function hideChoiceOverlay() {
+  if (!choiceOverlay) return;
+  choiceOverlay.classList.remove("open");
+}
+
+// ------------------------------------------------------------
+// QR code overlay (existing flow, unchanged)
+// ------------------------------------------------------------
+
+function buildQROverlay() {
+  if (qrOverlay) return qrOverlay;
+
+  qrOverlay = document.createElement("div");
+  qrOverlay.id = "save-export-overlay";
+  qrOverlay.className = "save-export";
+
+  qrOverlay.innerHTML = `
     <div class="save-export-card">
       <button class="save-export-close" type="button" aria-label="Close">&times;</button>
 
@@ -36,20 +107,19 @@ function buildOverlay() {
     </div>
   `;
 
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) {
-      hideOverlay();
-    }
+  qrOverlay.addEventListener("click", (e) => {
+    if (e.target === qrOverlay) hideQROverlay();
   });
 
-  overlay.querySelector(".save-export-close").addEventListener("click", hideOverlay);
+  qrOverlay.querySelector(".save-export-close")
+    .addEventListener("click", hideQROverlay);
 
-  document.body.appendChild(overlay);
-  return overlay;
+  document.body.appendChild(qrOverlay);
+  return qrOverlay;
 }
 
 export function showSaveExport({ id }) {
-  const el = buildOverlay();
+  const el = buildQROverlay();
 
   const img = el.querySelector(".save-export-qr");
 
@@ -77,12 +147,15 @@ export function showSaveExport({ id }) {
         "Could not generate QR / save link";
     });
 
-  return () => hideOverlay();
+  return () => hideQROverlay();
+}
+
+function hideQROverlay() {
+  if (!qrOverlay) return;
+  qrOverlay.classList.remove("open");
 }
 
 export function hideOverlay() {
-  if (!overlay) {
-    return;
-  }
-  overlay.classList.remove("open");
+  hideChoiceOverlay();
+  hideQROverlay();
 }

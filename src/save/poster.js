@@ -35,7 +35,7 @@ export async function renderPoster(opts) {
 // reuse the booth's renderer and draw into an offscreen render target sized
 // like the poster photo slot, then read the pixels back into a 2D canvas.
 // ------------------------------------------------------------
-async function renderSceneFrame(renderer, scene, camera) {
+export async function renderSceneFrame(renderer, scene, camera) {
   // Gesture indicator overlays (finger pointer, paint highlight) are marked
   // with userData.hideInPoster so they never appear in the saved photo, even
   // though they are visible on the live booth display.

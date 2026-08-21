@@ -203,3 +203,53 @@
 .save-code-card .save-export-hint {
   margin-bottom: 16px;
 }
+
+/* Export choice popup */
+
+.export-choice-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.export-choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 140px;
+  padding: 24px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 248, 220, 0.2);
+  background: rgba(255, 248, 220, 0.06);
+  color: #fff8dc;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-choice-btn svg {
+  width: 32px;
+  height: 32px;
+  stroke: #d87c46;
+}
+
+.export-choice-btn:hover {
+  background: rgba(181, 101, 53, 0.18);
+  border-color: #d87c46;
+  box-shadow: 0 6px 24px rgba(181, 101, 53, 0.3);
+}
+
+.export-choice-btn:hover svg {
+  stroke: #e8935a;
+}
+
+/* Hide everything when printing from the booth */
+
+@media print {
+  body > *:not(iframe) {
+    display: none !important;
+  }
+}

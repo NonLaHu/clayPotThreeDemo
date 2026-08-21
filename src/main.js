@@ -5,6 +5,11 @@ import { setupEnvironment } from "./environment.js";
 import { setupPaintingEnvironment } from "./paintingEnvironment.js";
 import { initHand, detectHand } from "./hand.js";
 
+
+import {
+  selectPattern, initDraw
+} from "./draw/drawController.js";
+
 import {
   initDebug,
   getDebugVideo,
@@ -19,10 +24,12 @@ import {
   SCULPT,
   COLOR_COUNT,
   raycaster,
-  mouse
+  mouse,
+  RETRY_DELAY,
+  PATTERNS
 } from "./core/constants.js";
 
-import { transitionToPaintRoom } from "./rooms/roomcontroller.js"
+import { transitionToPaintRoom, transitionToDrawRoom, } from "./rooms/roomcontroller.js"
 import { create, ground, paintHighlight, targetFinger, finger, light } from "./scene/create.js";
 import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
@@ -69,6 +76,10 @@ function setLoadingStatus(message) {
 
 function hideLoadingScreen() {
   loadingScreen?.classList.add("hidden");
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // CAMERA / WEBCAM
@@ -127,9 +138,29 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 function updateCamera() {
-  const radius = 5;
-  camera.position.y = 2 + Math.sin(state.camera.angle) * radius;
-  camera.position.z = Math.cos(state.camera.angle) * radius;
+  const radius = state.camera.radius;
+
+  const horizontal =
+    state.camera.angle;
+
+  const vertical =
+    state.camera.verticalAngle;
+
+  camera.position.x =
+    Math.sin(horizontal) *
+    Math.cos(vertical) *
+    radius;
+
+  camera.position.y =
+    1 +
+    Math.sin(vertical) *
+    radius;
+
+  camera.position.z =
+    Math.cos(horizontal) *
+    Math.cos(vertical) *
+    radius;
+
   camera.lookAt(0, 1, 0);
 }
 
@@ -227,44 +258,76 @@ initUI({
 
   // DONE
   onDone: () => {
-    transitionToPaintRoom();
+    switch (state.room) {
+      case ROOM_STATE.SCULPT_ROOM:
+        transitionToPaintRoom();
+        break;
+
+      case ROOM_STATE.PAINT_ROOM:
+        initDraw(scene);
+        transitionToDrawRoom();
+        break;
+
+      case ROOM_STATE.DRAW_ROOM:
+        console.log("Drawing complete");
+        break;
+
+      default:
+        console.warn(
+          "Unknown room state:",
+          state.room
+        );
+    }
   },
 });
 
 // HAND SETUP
 async function setup() {
-  try {
-    setLoadingStatus("Starting camera...");
-    await startCamera();
+  let attempt = 0;
 
-    setLoadingStatus("Loading hand tracking...");
-    await initHand();
+  while (true) {
+    attempt++;
 
-    setLoadingStatus("Initializing audio...");
-    initSound();
+    try {
+      setLoadingStatus(`Starting camera... (attempt ${attempt})`);
+      await startCamera();
 
-    setLoadingStatus("Preparing scene...");
+      setLoadingStatus(`Loading hand tracking... (attempt ${attempt})`);
+      await initHand();
 
-    await new Promise(requestAnimationFrame);
+      setLoadingStatus("Initializing audio...");
+      initSound();
 
-    setLoadingStatus("Ready!");
+      setLoadingStatus("Preparing scene...");
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(requestAnimationFrame);
 
-    hideLoadingScreen();
+      setLoadingStatus("Ready!");
 
-    animate();
+      await sleep(500);
 
-    console.log("Application ready");
-  } catch (error) {
-    console.error("Setup failed:", error);
+      hideLoadingScreen();
 
-    setLoadingStatus("Camera unavailable");
+      animate();
 
-    updateGestureHUD(
-      "Camera unavailable",
-      "alert-circle"
-    );
+      console.log("Application ready");
+
+      // IMPORTANT:
+      // Exit retry loop after successful initialization.
+      break;
+
+    } catch (error) {
+      console.error(
+        `Setup failed (attempt ${attempt}):`,
+        error
+      );
+
+      setLoadingStatus(
+        `Setup failed. Retrying in ${RETRY_DELAY / 1000}s...`
+      );
+
+      await sleep(RETRY_DELAY);
+    }
   }
 }
 
@@ -361,6 +424,8 @@ function updateClay() {
   state.sculpt.targetHeightChange = 0;
 }
 
+
+
 // ANIMATION
 function animate() {
   requestAnimationFrame(animate);
@@ -389,7 +454,22 @@ function animate() {
   }
 
   // CAMERA
-  state.camera.angle += (state.camera.targetAngle - state.camera.angle) * 0.1;
+  state.camera.angle +=
+    THREE.MathUtils.lerp(
+      0,
+      state.camera.targetAngle -
+        state.camera.angle,
+      0.1,
+    );
+
+  state.camera.verticalAngle +=
+    THREE.MathUtils.lerp(
+      0,
+      state.camera.targetVerticalAngle -
+        state.camera.verticalAngle,
+      0.1,
+    );
+
   updateCamera();
 
   // CLAY

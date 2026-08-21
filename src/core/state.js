@@ -8,10 +8,24 @@ export const state = {
   room: ROOM_STATE.SCULPT_ROOM,
   video: null,
 
-  camera: {
-    angle: 0.45,
-    targetAngle: 0.45,
+  draw : {
+    selectedPatternIndex: 0,
+    patternPickerActive: false,
+    patternPickerAngle: 0,
   },
+
+camera: {
+  angle: 0.45,
+  targetAngle: 0.45,
+
+  verticalAngle: 0.15,
+  targetVerticalAngle: 0.15,
+
+  radius: 5,
+
+  minVerticalAngle: -0.1,
+  maxVerticalAngle: 0.8,
+},
 
   sculpt: {
     lastHeightY: null,

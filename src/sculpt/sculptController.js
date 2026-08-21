@@ -71,14 +71,63 @@ export function updateSculptHandInput({
   }
 
   // OPEN PALM
-  if (openPalm && pinch <= 0.5 && !heightGesture) {
-    updateGestureHUD("Rotating Camera", "edit-3");
+ if (
+    openPalm &&
+    pinch <= 0.5
+  ) {
+    updateGestureHUD(
+      "Rotating Camera",
+      "edit-3",
+    );
+
+    const palmX =
+    (
+        hand[0].x +
+        hand[5].x +
+        hand[9].x +
+        hand[13].x +
+        hand[17].x
+    ) / 5;
 
     const palmY =
-      (hand[0].y + hand[5].y + hand[9].y + hand[13].y + hand[17].y) / 5;
+    (
+        hand[0].y +
+        hand[5].y +
+        hand[9].y +
+        hand[13].y +
+        hand[17].y
+    ) / 5;
 
-    state.camera.targetAngle = THREE.MathUtils.mapLinear(palmY, 0.2, 0.8, -0.2, 1.2);
+state.camera.targetAngle =
+  THREE.MathUtils.mapLinear(
+    palmX,
+    0.15,
+    0.85,
+    Math.PI,
+    -Math.PI,
+  );
+
+state.camera.targetVerticalAngle =
+  THREE.MathUtils.mapLinear(
+    palmY,
+    0.15,
+    0.85,
+    -0.5,
+    0.8,
+  );
+
+  state.camera.targetVerticalAngle =
+  THREE.MathUtils.clamp(
+    state.camera.targetVerticalAngle,
+    state.camera.minVerticalAngle,
+    state.camera.maxVerticalAngle,
+  );
+
+
+
+    return;
   }
+
 
   // POINTING
   if (pointing && pinch <= 0.5 && !heightGesture && !openPalm) {

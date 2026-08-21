@@ -2,11 +2,13 @@ import * as THREE from "three";
 
 // DEBUG
 export const DEBUG = true;
+export const RETRY_DELAY = 2000; 
 
 // ROOM
 export const ROOM_STATE = {
   SCULPT_ROOM: "sculpt_room",
   PAINT_ROOM: "paint_room",
+  DRAW_ROOM: "draw",
 };
 
 // PAINT 
@@ -30,6 +32,22 @@ export const CLAY_POT = {
   THICKNESS : 0.05,
   CYLINDER_RADIUS : 0.7,
 };
+
+// Pattern
+export const PATTERNS = [
+  {
+    id: "flower",
+    src: "/patterns/flower.png",
+  },
+  {
+    id: "gg",
+    src: "/patterns/flower.png",
+  },
+  {
+    id: "bb",
+    src: "/patterns/flower.png",
+  },
+];
 
 // COLORS
 export const COLOR = [

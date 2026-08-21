@@ -63,3 +63,62 @@ export function transitionToPaintRoom() {
     }, 100);
   }, 500);
 }
+
+// TRANSITION: PAINT -> DRAW
+export function transitionToDrawRoom() {
+  if (state.room !== ROOM_STATE.PAINT_ROOM) {
+    return;
+  }
+
+  const transitionOverlay =
+    document.getElementById("transition-overlay");
+
+  const colorSelector =
+    document.getElementById("color-selector");
+
+  const paintingControls =
+    document.getElementById("painting-controls");
+
+  const paintingDoneButton =
+    document.getElementById("painting-done-button");
+
+  const drawControls =
+    document.getElementById("draw-controls");
+
+  if (transitionOverlay) {
+    transitionOverlay.classList.add("active");
+  }
+
+  setTimeout(() => {
+    // Hide painting UI
+    if (colorSelector) {
+      colorSelector.classList.remove("visible");
+    }
+
+    if (paintingControls) {
+      paintingControls.classList.remove("visible");
+    }
+
+    if (paintingDoneButton) {
+      paintingDoneButton.classList.remove("visible");
+    }
+
+    // Show drawing UI
+    if (drawControls) {
+      drawControls.classList.add("visible");
+    }
+
+    // Change gesture guide
+    updateGestureGuide(ROOM_STATE.DRAW_ROOM);
+
+    // Change room
+    state.room = ROOM_STATE.DRAW_ROOM;
+
+    setTimeout(() => {
+      if (transitionOverlay) {
+        transitionOverlay.classList.remove("active");
+      }
+    }, 100);
+
+  }, 500);
+}

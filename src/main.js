@@ -57,6 +57,20 @@ light.shadow.mapSize.height = 1024;
 light.shadow.camera.near = 0.5;
 light.shadow.camera.far = 50;
 
+//LOADING
+const loadingScreen = document.getElementById("loading-screen");
+const loadingStatus = document.getElementById("loading-status");
+
+function setLoadingStatus(message) {
+  if (loadingStatus) {
+    loadingStatus.textContent = message;
+  }
+}
+
+function hideLoadingScreen() {
+  loadingScreen?.classList.add("hidden");
+}
+
 // CAMERA / WEBCAM
 async function startCamera() {
   const video = getDebugVideo();
@@ -127,8 +141,6 @@ scene.add(paintHighlight);
 scene.add(finger);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
 scene.add(light);
-// SOUND
-initSound();
 
 // CLAY
 const initialClayPositions = geometry.attributes.position.array.slice();
@@ -222,15 +234,37 @@ initUI({
 // HAND SETUP
 async function setup() {
   try {
+    setLoadingStatus("Starting camera...");
     await startCamera();
 
+    setLoadingStatus("Loading hand tracking...");
     await initHand();
 
-    console.log("hand tracking + sound ready");
+    setLoadingStatus("Initializing audio...");
+    initSound();
+
+    setLoadingStatus("Preparing scene...");
+
+    await new Promise(requestAnimationFrame);
+
+    setLoadingStatus("Ready!");
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    hideLoadingScreen();
+
+    animate();
+
+    console.log("Application ready");
   } catch (error) {
     console.error("Setup failed:", error);
 
-    updateGestureHUD("Camera unavailable", "alert-circle");
+    setLoadingStatus("Camera unavailable");
+
+    updateGestureHUD(
+      "Camera unavailable",
+      "alert-circle"
+    );
   }
 }
 

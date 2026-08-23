@@ -4,6 +4,7 @@ let currentIcon = "activity";
 
 const SCULPT_ROOM = "sculpt_room";
 const PAINT_ROOM = "paint_room";
+const DRAW_ROOM = "draw";
 
 const GESTURE_GUIDES = {
   [SCULPT_ROOM]: [
@@ -40,6 +41,24 @@ const GESTURE_GUIDES = {
     {
       title: "Rotate Hand",
       desc: "Sweep the color wheel to pick a color",
+    },
+    {
+      title: "Open Palm",
+      desc: "Tilt & rotate camera view",
+    },
+  ],
+  [DRAW_ROOM]: [
+    {
+      title: "Point Finger",
+      desc: "Aim the pattern placement on the pot",
+    },
+    {
+      title: "Pinch (Thumb + Index)",
+      desc: "Stamp the selected pattern",
+    },
+    {
+      title: "Spider-Man (Index + Pinky)",
+      desc: "Toggle the pattern picker wheel",
     },
     {
       title: "Open Palm",
@@ -470,6 +489,64 @@ export function updateGestureGuide(
   menu.innerHTML =
     renderGestureGuide(room);
 
+  if (window.feather) {
+    window.feather.replace();
+  }
+}
+
+// =========================
+// Pattern Panel Initialization
+// =========================
+
+let onPatternSelect = null;
+
+export function setPatternSelectCallback(callback) {
+  onPatternSelect = callback;
+}
+
+export function initPatternPanel() {
+  const patternPanel = document.getElementById("pattern-panel");
+  if (!patternPanel) return;
+
+  // Initialize collapsible sections
+  const sectionHeaders = patternPanel.querySelectorAll(".pattern-section-header");
+  sectionHeaders.forEach(header => {
+    header.addEventListener("click", () => {
+      const section = header.closest(".pattern-section");
+      section.classList.toggle("collapsed");
+    });
+  });
+
+  // Initialize pattern selection
+  const patternOptions = patternPanel.querySelectorAll(".pattern-image-placeholder");
+  patternOptions.forEach(option => {
+    option.addEventListener("click", () => {
+      // Remove selected class from all options
+      patternOptions.forEach(opt => opt.classList.remove("selected"));
+      // Add selected class to clicked option
+      option.classList.add("selected");
+      
+      // Get pattern index
+      const patternIndex = parseInt(option.dataset.patternIndex);
+      console.log("Pattern selected:", patternIndex);
+      
+      // Call the pattern selection callback if available
+      if (onPatternSelect && typeof onPatternSelect === 'function') {
+        onPatternSelect(patternIndex);
+      }
+    });
+  });
+
+  // Initialize "See All" button
+  const seeAllBtn = patternPanel.querySelector(".see-all-btn");
+  if (seeAllBtn) {
+    seeAllBtn.addEventListener("click", () => {
+      console.log("See all patterns clicked");
+      // You could expand this to show more patterns or open a modal
+    });
+  }
+
+  // Initialize feather icons for the panel
   if (window.feather) {
     window.feather.replace();
   }

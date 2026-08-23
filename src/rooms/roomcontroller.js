@@ -85,6 +85,9 @@ export function transitionToDrawRoom() {
   const drawControls =
     document.getElementById("draw-controls");
 
+  const patternPanel =
+    document.getElementById("pattern-panel");
+
   if (transitionOverlay) {
     transitionOverlay.classList.add("active");
   }
@@ -106,6 +109,11 @@ export function transitionToDrawRoom() {
     // Show drawing UI
     if (drawControls) {
       drawControls.classList.add("visible");
+    }
+
+    // Show pattern panel
+    if (patternPanel) {
+      patternPanel.classList.add("visible");
     }
 
     // Change gesture guide

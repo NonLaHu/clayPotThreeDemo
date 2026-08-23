@@ -35,7 +35,7 @@ import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
 
 import { updateHandInput } from "./interaction/handInput.js";
-import { initUI, updateGestureHUD, updateGestureGuide } from "./UI/ui.js";
+import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback } from "./UI/ui.js";
 
 import { createSaveFlow } from "./save/saveFlow.js";
 import { restorePotFromSave } from "./save/restorePot.js";
@@ -101,8 +101,10 @@ async function startCamera() {
 }
 
 // SCENE
+let patternScene = null;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
+patternScene = scene;
 
 // SCULPTING ENVIRONMENT
 state.rooms.sculptingEnvironmentGroup = new THREE.Group();
@@ -279,6 +281,16 @@ initUI({
         );
     }
   },
+});
+
+// Initialize pattern panel
+initPatternPanel();
+
+// Set up pattern selection callback (will be called after scene is ready)
+setPatternSelectCallback((patternIndex) => {
+  if (patternScene) {
+    selectPattern(patternIndex, patternScene);
+  }
 });
 
 // HAND SETUP

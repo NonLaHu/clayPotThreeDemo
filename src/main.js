@@ -342,10 +342,6 @@ function transitionToPaintRoom() {
 
   const colorSelector = document.getElementById("color-selector");
 
-  const paintingControls = document.getElementById("painting-controls");
-
-  const paintingDoneButton = document.getElementById("painting-done-button");
-
   if (transitionOverlay) {
     transitionOverlay.classList.add("active");
   }
@@ -376,14 +372,6 @@ function transitionToPaintRoom() {
 
     if (colorSelector) {
       colorSelector.classList.add("visible");
-    }
-
-    if (paintingControls) {
-      paintingControls.classList.add("visible");
-    }
-
-    if (paintingDoneButton) {
-      paintingDoneButton.classList.add("visible");
     }
 
     // --------------------------------------------------------
@@ -628,10 +616,6 @@ const transitionOverlay = document.getElementById("transition-overlay");
 
 const colorSelector = document.getElementById("color-selector");
 
-const paintingControls = document.getElementById("painting-controls");
-
-const paintingDoneButton = document.getElementById("painting-done-button");
-
 const sunflowerWheel = document.querySelector(".sunflower-wheel");
 
 const petalColors = [
@@ -665,16 +649,6 @@ let colorPickerAngle = 0;
 let selectedColorIndex = 0;
 
 const COLOR_COUNT = colorHex.length;
-// ============================================================
-// PAINTING DONE
-// ============================================================
-
-if (paintingDoneButton) {
-  paintingDoneButton.addEventListener("click", () => {
-    console.log("Painting complete");
-  });
-}
-
 // ============================================================
 // COLOR SELECTOR
 // ============================================================

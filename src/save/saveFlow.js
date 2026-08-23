@@ -1,16 +1,18 @@
 import { createSave, uploadPhoto, fetchSave } from "./saveApi.js";
 import { renderPoster } from "./poster.js";
-import { showSaveExport } from "./exportOverlay.js";
+import { showSaveExport, showExportChoice } from "./exportOverlay.js";
 import { showLoadConfirm } from "./loadConfirm.js";
 import { showLoadCode } from "./loadCode.js";
 import { codeToId } from "./code.js";
 import { capturePotState } from "./restorePot.js";
+import { printPoster } from "./printPoster.js";
+import { showCreatorNamePrompt } from "./creatorNamePrompt.js";
 
 /**
  * Ties together the save flow:
- *  - Export: capture state -> save to booth server -> build poster (with the
- *    pot at the user's chosen angle + the save code) -> upload photo -> show
- *    the download QR + code to the student.
+ *  - Export: shows a choice popup (QR Code | Print), then either:
+ *    QR: capture state -> save to booth server -> build poster -> upload photo -> show QR
+ *    Print: capture state -> save to booth server -> render scene -> open print dialog
  *  - Import: student types the save code from their poster into the
  *    "Load Progress" prompt; on match, ask if they want to load that pot back.
  */
@@ -27,25 +29,20 @@ export function createSaveFlow(options) {
 
   return {
     async exportCurrentWork() {
-      const angle = getCameraAngle();
-
-      const state = capturePotState(geometry);
-
-      const { id } = await createSave({ ...state, angle });
-
-      const poster = await renderPoster({
-        renderer,
-        scene,
-        camera,
-        id,
-        boothLabel,
+      showExportChoice({
+        onQR: () => {
+          exportQR({ renderer, scene, camera, geometry, getCameraAngle, boothLabel })
+            .catch((error) => {
+              console.error("QR export failed:", error);
+            });
+        },
+        onPrint: () => {
+          exportPrint({ renderer, scene, camera, geometry, getCameraAngle, boothLabel })
+            .catch((error) => {
+              console.error("Print export failed:", error);
+            });
+        },
       });
-
-      await uploadPhoto(id, poster);
-
-      showSaveExport({ id });
-
-      return id;
     },
 
     loadByCode() {
@@ -78,4 +75,29 @@ export function createSaveFlow(options) {
       });
     },
   };
+}
+
+// ------------------------------------------------------------
+// Private helpers for the two export paths
+// ------------------------------------------------------------
+
+async function exportQR({ renderer, scene, camera, geometry, getCameraAngle, boothLabel }) {
+  const angle = getCameraAngle();
+  const state = capturePotState(geometry);
+  const { id } = await createSave({ ...state, angle });
+  const poster = await renderPoster({ renderer, scene, camera, id, boothLabel });
+  await uploadPhoto(id, poster);
+  showSaveExport({ id });
+  return id;
+}
+
+async function exportPrint({ renderer, scene, camera, geometry, getCameraAngle, boothLabel }) {
+  const creatorName = await showCreatorNamePrompt();
+
+  if (creatorName === null) return;
+
+  const angle = getCameraAngle();
+  const state = capturePotState(geometry);
+  await createSave({ ...state, angle });
+  await printPoster({ renderer, scene, camera, creatorName });
 }

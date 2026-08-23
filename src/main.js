@@ -68,6 +68,7 @@ light.shadow.camera.far = 50;
 const loadingScreen = document.getElementById("loading-screen");
 const loadingStatus = document.getElementById("loading-status");
 
+
 function setLoadingStatus(message) {
   if (loadingStatus) {
     loadingStatus.textContent = message;
@@ -83,9 +84,19 @@ function sleep(ms) {
 }
 
 // CAMERA / WEBCAM
+let cameraStream = null;
+
 async function startCamera() {
   const video = getDebugVideo();
-  const stream =
+
+  // Stop previous stream if retrying
+  if (cameraStream) {
+    cameraStream.getTracks().forEach((track) => {
+      track.stop();
+    });
+  }
+
+  cameraStream =
     await navigator.mediaDevices.getUserMedia({
       video: {
         width: 640,
@@ -93,13 +104,12 @@ async function startCamera() {
       },
     });
 
-  video.srcObject = stream;
+  video.srcObject = cameraStream;
 
   await video.play();
 
   console.log("camera ready");
 }
-
 // SCENE
 let patternScene = null;
 const scene = new THREE.Scene();
@@ -301,16 +311,27 @@ async function setup() {
     attempt++;
 
     try {
-      setLoadingStatus(`Starting camera... (attempt ${attempt})`);
+      setLoadingStatus(
+        `Starting camera... (attempt ${attempt})`
+      );
+
       await startCamera();
 
-      setLoadingStatus(`Loading hand tracking... (attempt ${attempt})`);
+      setLoadingStatus(
+        `Loading hand tracking... (attempt ${attempt})`
+      );
+
       await initHand();
 
-      setLoadingStatus("Initializing audio...");
+      setLoadingStatus(
+        "Initializing audio..."
+      );
+
       initSound();
 
-      setLoadingStatus("Preparing scene...");
+      setLoadingStatus(
+        "Preparing scene..."
+      );
 
       await new Promise(requestAnimationFrame);
 
@@ -320,12 +341,11 @@ async function setup() {
 
       hideLoadingScreen();
 
+      // START APP ONLY AFTER EVERYTHING IS READY
       animate();
 
       console.log("Application ready");
 
-      // IMPORTANT:
-      // Exit retry loop after successful initialization.
       break;
 
     } catch (error) {
@@ -335,7 +355,9 @@ async function setup() {
       );
 
       setLoadingStatus(
-        `Setup failed. Retrying in ${RETRY_DELAY / 1000}s...`
+        `Setup failed. Retrying in ${
+          RETRY_DELAY / 1000
+        }s...`
       );
 
       await sleep(RETRY_DELAY);
@@ -505,7 +527,6 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-animate();
 
 // RESIZE
 window.addEventListener("resize", () => {

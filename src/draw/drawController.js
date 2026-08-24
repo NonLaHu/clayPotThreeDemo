@@ -285,16 +285,12 @@ function hidePatternPreview() {
 function stampPattern(hit) {
   if (
     !selectedPattern ||
-    !patternImage ||
+    !patternTexture ||
     !paintContext ||
     !paintTexture
   ) {
     return;
   }
-
-  // ----------------------------------------------------------
-  // Make sure the raycast gave us UV coordinates
-  // ----------------------------------------------------------
 
   if (!hit.uv) {
     console.warn(
@@ -322,14 +318,7 @@ function stampPattern(hit) {
     canvasHeight;
 
   // ----------------------------------------------------------
-  // Pattern dimensions
-  //
-  // The pattern wraps around the ENTIRE pot.
-  //
-  // Therefore:
-  //
-  // pattern width  = entire canvas width
-  // pattern height = limited vertical band
+  // Pattern height
   // ----------------------------------------------------------
 
   const patternHeight =
@@ -337,55 +326,40 @@ function stampPattern(hit) {
       canvasHeight * 0.30
     );
 
-  // ----------------------------------------------------------
-  // Draw the pattern into a temporary canvas
-  // ----------------------------------------------------------
-
-  const sourceCanvas =
-    document.createElement("canvas");
-
-  sourceCanvas.width =
-    patternImage.width;
-
-  sourceCanvas.height =
-    patternImage.height;
-
-  const sourceContext =
-    sourceCanvas.getContext("2d");
-
-  sourceContext.drawImage(
-    patternImage,
-    0,
-    0
-  );
-
-  // ----------------------------------------------------------
-  // We want the ORIGINAL pattern colors.
-  //
-  // No selectedColor is involved.
-  // ----------------------------------------------------------
-
-  // ----------------------------------------------------------
-  // Resize the pattern so:
-  //
-  // X = full 360° circumference
-  // Y = limited height
-  // ----------------------------------------------------------
-
   const patternY =
     centerY -
     patternHeight / 2;
 
+  // ----------------------------------------------------------
+  // ORIGINAL PNG IMAGE
+  //
+  // patternTexture.image is the actual HTMLImageElement.
+  // ----------------------------------------------------------
+
+  const image =
+    patternTexture.image;
+
+  if (!image) {
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // Draw the original pattern
+  //
+  // X = entire circumference
+  // Y = limited height
+  // ----------------------------------------------------------
+
   paintContext.drawImage(
-    sourceCanvas,
+    image,
 
-    // source
+    // source rectangle
     0,
     0,
-    patternImage.width,
-    patternImage.height,
+    image.width,
+    image.height,
 
-    // destination
+    // destination rectangle
     0,
     patternY,
     canvasWidth,

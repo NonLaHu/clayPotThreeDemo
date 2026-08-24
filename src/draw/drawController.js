@@ -22,8 +22,10 @@ let paintTexture = null;
 
 const PAINT_RESOLUTION = 2048;
 
+let stampHighlight = null;
+const STAMP_HEIGHT_RATIO = 0.30;
+
 let selectedPattern = null;
-let patternPreview = null;
 let patternTexture = null;
 
 let patternCanvas = null;
@@ -37,6 +39,117 @@ const MAX_UNDO_STEPS = 20;
 let patternPickerActive = false;
 let lastSpiderSign = false;
 let lastPinch = false;
+
+function createStampHighlight(scene, pot) {
+  if (stampHighlight) {
+    return;
+  }
+
+  const geometry =
+    new THREE.CylinderGeometry(
+      1,
+      1,
+      1,
+      96,
+      1,
+      true
+    );
+
+  const material =
+    new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.12,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+      depthTest: false,
+    });
+
+  stampHighlight =
+    new THREE.Mesh(
+      geometry,
+      material
+    );
+
+  stampHighlight.visible = false;
+
+  scene.add(
+    stampHighlight
+  );
+}
+
+function updateStampHighlight(
+  hit,
+  pot
+) {
+  if (!stampHighlight) {
+    return;
+  }
+
+  // ----------------------------------------------------------
+  // Pattern height
+  // ----------------------------------------------------------
+
+  const potBox =
+    new THREE.Box3().setFromObject(
+      pot
+    );
+
+  const potHeight =
+    potBox.max.y -
+    potBox.min.y;
+
+  const stampHeight =
+    potHeight *
+    STAMP_HEIGHT_RATIO;
+
+  // ----------------------------------------------------------
+  // Vertical center from finger
+  // ----------------------------------------------------------
+
+  const centerY =
+    hit.point.y;
+
+  // ----------------------------------------------------------
+  // Pot radius
+  // ----------------------------------------------------------
+
+  const center =
+    potBox.getCenter(
+      new THREE.Vector3()
+    );
+
+  const radius =
+    Math.max(
+      potBox.max.x - center.x,
+      potBox.max.z - center.z
+    );
+
+  // ----------------------------------------------------------
+  // Position
+  // ----------------------------------------------------------
+
+  stampHighlight.position.set(
+    center.x,
+    centerY,
+    center.z
+  );
+
+  // ----------------------------------------------------------
+  // Scale cylinder
+  //
+  // Geometry radius = 1
+  // Geometry height = 1
+  // ----------------------------------------------------------
+
+  stampHighlight.scale.set(
+    radius * 1.01,
+    stampHeight,
+    radius * 1.01
+  );
+
+  stampHighlight.visible = true;
+}
 
 function savePaintState() {
   if (!paintCanvas || !paintContext) {
@@ -60,6 +173,33 @@ function savePaintState() {
   ) {
     paintHistory.shift();
   }
+}
+
+export function undoPaint() {
+  if (
+    paintHistory.length === 0
+  ) {
+    console.log(
+      "Nothing to undo."
+    );
+
+    return;
+  }
+
+  const previousState =
+    paintHistory.pop();
+
+  paintContext.putImageData(
+    previousState,
+    0,
+    0
+  );
+
+  paintTexture.needsUpdate = true;
+
+  console.log(
+    "Paint undone."
+  );
 }
 
 //selector
@@ -177,11 +317,6 @@ function loadPattern(pattern) {
 
       texture.colorSpace = THREE.SRGBColorSpace;
 
-      if (patternPreview) {
-        patternPreview.material.map = texture;
-        patternPreview.material.needsUpdate = true;
-      }
-
       // Load PNG pixels for stamping
       const image = texture.image;
 
@@ -266,100 +401,6 @@ function updatePatternUI(index) {
 }
 
 
-// ==========================================================
-// CREATE PREVIEW
-// ==========================================================
-
-function createPatternPreview(scene) {
-  if (patternPreview) {
-    return;
-  }
-
-  const material =
-    new THREE.SpriteMaterial({
-      transparent: true,
-      opacity: 0.65,
-      depthWrite: false,
-    });
-
-  patternPreview =
-    new THREE.Sprite(material);
-
-  patternPreview.scale.set(
-    0.6,
-    0.6,
-    0.6,
-  );
-
-  patternPreview.visible = false;
-
-  scene.add(patternPreview);
-}
-
-
-// ==========================================================
-// SHOW PREVIEW
-// ==========================================================
-
-function showPatternPreview(
-  point,
-  normal,
-) {
-  if (!patternPreview || !patternTexture) {
-    return;
-  }
-
-  patternPreview.position.copy(point);
-
-  // Move slightly away from the pot
-  // to prevent z-fighting.
-  patternPreview.position.addScaledVector(
-    normal,
-    0.01,
-  );
-
-  patternPreview.visible = true;
-}
-
-
-// ==========================================================
-// HIDE PREVIEW
-// ==========================================================
-
-function hidePatternPreview() {
-  if (!patternPreview) {
-    return;
-  }
-
-  patternPreview.visible = false;
-}
-
-export function undoPaint() {
-  if (
-    paintHistory.length === 0
-  ) {
-    console.log(
-      "Nothing to undo."
-    );
-
-    return;
-  }
-
-  const previousState =
-    paintHistory.pop();
-
-  paintContext.putImageData(
-    previousState,
-    0,
-    0
-  );
-
-  paintTexture.needsUpdate = true;
-
-  console.log(
-    "Paint undone."
-  );
-}
 // ==========================================================
 // STAMP
 // ==========================================================
@@ -456,21 +497,24 @@ function stampPattern(hit) {
     selectedPattern.id
   );
 }
-
-// init drawing
 export function initDraw(
   scene,
   pot
 ) {
-  createPatternPreview(scene);
+  createStampHighlight(
+    scene,
+    pot
+  );
 
-  createPaintTexture(pot);
+  createPaintTexture(
+    pot
+  );
 
-  // Select first pattern
   selectedPattern =
     PATTERNS[0];
 
-  state.draw.selectedPatternIndex = 0;
+  state.draw.selectedPatternIndex =
+    0;
 
   loadPattern(
     selectedPattern
@@ -494,7 +538,6 @@ export function selectPattern(index, scene) {
 
   setSelectedPattern(index);
 
-  createPatternPreview(scene);
 }
 
 
@@ -567,7 +610,6 @@ export function updateDrawHandInput({
       "palette",
     );
 
-    hidePatternPreview();
 
     finger.visible = false;
 
@@ -634,7 +676,6 @@ export function updateDrawHandInput({
 
     
 
-    hidePatternPreview();
 
     finger.visible = false;
 
@@ -664,18 +705,6 @@ export function updateDrawHandInput({
 
 
   // ==========================================================
-  // MISS
-  // ==========================================================
-
-    if (!hits.length) {
-    hidePatternPreview();
-    finger.visible = false;
-    lastPinch = false;
-    return;
-    }
-
-
-  // ==========================================================
   // HIT
   // ==========================================================
 
@@ -687,17 +716,10 @@ export function updateDrawHandInput({
     hit.point
   );
 
-
-  // ==========================================================
-  // SHOW PATTERN
-  // ==========================================================
-
-  if (selectedPattern) {
-    showPatternPreview(
-      hit.point,
-      hit.face.normal,
-    );
-  }
+  updateStampHighlight(
+    hit,
+    pot
+  );
 
 
   // ==========================================================

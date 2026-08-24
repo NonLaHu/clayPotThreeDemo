@@ -23,7 +23,7 @@ let paintTexture = null;
 const PAINT_RESOLUTION = 2048;
 
 let stampHighlight = null;
-const STAMP_HEIGHT_RATIO = 0.30;
+const STAMP_HEIGHT = 0.30;
 
 let selectedPattern = null;
 let patternTexture = null;
@@ -100,8 +100,7 @@ function updateStampHighlight(
     potBox.min.y;
 
   const stampHeight =
-    potHeight *
-    STAMP_HEIGHT_RATIO;
+    STAMP_HEIGHT;
 
   // ----------------------------------------------------------
   // Vertical center from finger
@@ -404,7 +403,7 @@ function updatePatternUI(index) {
 // ==========================================================
 // STAMP
 // ==========================================================
-function stampPattern(hit) {
+function stampPattern(hit,pot) {
   if (
     !selectedPattern ||
     !patternTexture ||
@@ -418,7 +417,6 @@ function stampPattern(hit) {
     console.warn(
       "Pot geometry does not have UV coordinates."
     );
-
     return;
   }
 
@@ -429,33 +427,45 @@ function stampPattern(hit) {
     paintCanvas.height;
 
   // ----------------------------------------------------------
-  // Hit UV → canvas position
+  // PATTERN HEIGHT
+  //
+  // This is now controlled by STAMP_HEIGHT_RATIO.
+  //
+  // Example:
+  // 0.10 = 10% of pot height
+  // 0.20 = 20%
+  // 0.30 = 30%
   // ----------------------------------------------------------
 
-  const centerX =
-    hit.uv.x * canvasWidth;
+  const potBox =
+    new THREE.Box3().setFromObject(
+      pot
+    );
+
+  const potHeight =
+    potBox.max.y -
+    potBox.min.y;
+
+  const patternHeight =
+    Math.floor(
+      canvasHeight *
+      (STAMP_HEIGHT / potHeight)
+    );
+
+  // ----------------------------------------------------------
+  // Finger's vertical UV position
+  // ----------------------------------------------------------
 
   const centerY =
     (1 - hit.uv.y) *
     canvasHeight;
-
-  // ----------------------------------------------------------
-  // Pattern height
-  // ----------------------------------------------------------
-
-  const patternHeight =
-    Math.floor(
-      canvasHeight * 0.30
-    );
 
   const patternY =
     centerY -
     patternHeight / 2;
 
   // ----------------------------------------------------------
-  // ORIGINAL PNG IMAGE
-  //
-  // patternTexture.image is the actual HTMLImageElement.
+  // Pattern image
   // ----------------------------------------------------------
 
   const image =
@@ -466,24 +476,26 @@ function stampPattern(hit) {
   }
 
   // ----------------------------------------------------------
-  // Draw the original pattern
-  //
-  // X = entire circumference
-  // Y = limited height
+  // Save before modifying canvas
   // ----------------------------------------------------------
 
   savePaintState();
 
+  // ----------------------------------------------------------
+  // Stamp
+  //
+  // Full width = entire circumference
+  // Height = STAMP_HEIGHT_RATIO
+  // ----------------------------------------------------------
+
   paintContext.drawImage(
     image,
 
-    // source rectangle
     0,
     0,
     image.width,
     image.height,
 
-    // destination rectangle
     0,
     patternY,
     canvasWidth,
@@ -493,10 +505,12 @@ function stampPattern(hit) {
   paintTexture.needsUpdate = true;
 
   console.log(
-    "TEXTURE PATTERN STAMP:",
-    selectedPattern.id
+    "STAMP HEIGHT:",
+    STAMP_HEIGHT
   );
 }
+
+
 export function initDraw(
   scene,
   pot
@@ -677,7 +691,6 @@ export function updateDrawHandInput({
     
 
 
-    finger.visible = false;
 
     return;
   }
@@ -702,6 +715,17 @@ export function updateDrawHandInput({
     raycaster.intersectObject(
       pot
     );
+  
+  if (!hits.length) {
+  if (stampHighlight) {
+    stampHighlight.visible = false;
+  }
+
+  finger.visible = false;
+  lastPinch = false;
+
+  return;
+}
 
 
   // ==========================================================
@@ -710,11 +734,6 @@ export function updateDrawHandInput({
 
   const hit = hits[0];
 
-  finger.visible = true;
-
-  targetFinger.copy(
-    hit.point
-  );
 
   updateStampHighlight(
     hit,
@@ -735,7 +754,7 @@ export function updateDrawHandInput({
     );
 
     stampPattern(
-        hit
+        hit, pot
     );
     }
 

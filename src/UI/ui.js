@@ -94,6 +94,7 @@ export function initUI({
   onSoundToggle,
   onDone,
   onLoad,
+  onUndo,
 }) {
   if (document.getElementById("ui-overlay")) return;
 
@@ -195,6 +196,18 @@ export function initUI({
         <span>Reset Pot</span>
       </button>
 
+      <!-- Undo -->
+
+      <button
+        id="btn-undo"
+        class="hud-btn"
+        style="display: none;"
+        title="Undo last pattern"
+      >
+        <i data-feather="corner-up-left"></i>
+        <span>Undo</span>
+      </button>
+
 
       <!-- Load Progress -->
 
@@ -267,6 +280,18 @@ export function initUI({
       "click",
       onDone,
     );
+
+  const undoButton =
+    document.getElementById(
+      "btn-undo"
+    );
+
+  if (undoButton && onUndo) {
+    undoButton.addEventListener(
+      "click",
+      onUndo,
+    );
+  }
 
 
   // =========================
@@ -550,4 +575,18 @@ export function initPatternPanel() {
   if (window.feather) {
     window.feather.replace();
   }
+}
+
+export function updateStageUI() {
+  const undoButton =
+    document.getElementById(
+      "btn-undo"
+    );
+
+  if (!undoButton) {
+    return;
+  }
+
+  undoButton.style.display = "flex";
+
 }

@@ -30,9 +30,37 @@ let patternCanvas = null;
 let patternContext = null;
 let patternImage = null;
 
+let paintHistory = [];
+
+const MAX_UNDO_STEPS = 20;
+
 let patternPickerActive = false;
 let lastSpiderSign = false;
 let lastPinch = false;
+
+function savePaintState() {
+  if (!paintCanvas || !paintContext) {
+    return;
+  }
+
+  const imageData =
+    paintContext.getImageData(
+      0,
+      0,
+      paintCanvas.width,
+      paintCanvas.height
+    );
+
+  paintHistory.push(imageData);
+
+  // Prevent unlimited memory usage
+  if (
+    paintHistory.length >
+    MAX_UNDO_STEPS
+  ) {
+    paintHistory.shift();
+  }
+}
 
 //selector
 function selectPatternFromAngle(angle) {
@@ -306,7 +334,32 @@ function hidePatternPreview() {
   patternPreview.visible = false;
 }
 
+export function undoPaint() {
+  if (
+    paintHistory.length === 0
+  ) {
+    console.log(
+      "Nothing to undo."
+    );
 
+    return;
+  }
+
+  const previousState =
+    paintHistory.pop();
+
+  paintContext.putImageData(
+    previousState,
+    0,
+    0
+  );
+
+  paintTexture.needsUpdate = true;
+
+  console.log(
+    "Paint undone."
+  );
+}
 // ==========================================================
 // STAMP
 // ==========================================================
@@ -377,6 +430,8 @@ function stampPattern(hit) {
   // X = entire circumference
   // Y = limited height
   // ----------------------------------------------------------
+
+  savePaintState();
 
   paintContext.drawImage(
     image,

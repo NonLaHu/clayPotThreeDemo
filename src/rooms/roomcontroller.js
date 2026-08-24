@@ -6,6 +6,14 @@ import {
   updateWheelSound,
   stopSculptSound,
 } from "../sound.js";
+import {
+  updateStageUI
+} from "../UI/ui.js";
+import {
+  undoPaint
+} from "../draw/drawController.js";
+
+
 
 // TRANSITION: SCULPT -> PAINT
 export function transitionToPaintRoom() {
@@ -69,6 +77,14 @@ export function transitionToDrawRoom() {
   if (state.room !== ROOM_STATE.PAINT_ROOM) {
     return;
   }
+
+  updateStageUI();
+  document
+  .getElementById("btn-undo")
+  .addEventListener(
+    "click",
+    undoPaint
+  );
 
   const transitionOverlay =
     document.getElementById("transition-overlay");

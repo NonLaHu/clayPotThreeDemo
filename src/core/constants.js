@@ -33,39 +33,47 @@ export const CLAY_POT = {
   CYLINDER_RADIUS : 0.7,
 };
 
-// Pattern
 export const PATTERNS = [
   {
     id: "flower",
     src: "/patterns/flower.png",
+    height: 0.50,
   },
+
   {
     id: "flower2",
     src: "/patterns/flower.png",
+    height: 0.10,
   },
+
   {
     id: "flower3",
     src: "/patterns/flower.png",
+    height: 0.15,
   },
-    {
-    id: "flower3",
+
+  {
+    id: "flower4",
     src: "/patterns/flower.png",
+    height: 0.08,
   },
-    {
-    id: "flower3",
+
+  {
+    id: "flower4",
     src: "/patterns/flower.png",
+    height: 0.08,
   },
-    {
-    id: "flower3",
+
+  {
+    id: "flower4",
     src: "/patterns/flower.png",
+    height: 0.08,
   },
-    {
-    id: "flower3",
+
+  {
+    id: "flower4",
     src: "/patterns/flower.png",
-  },
-    {
-    id: "flower3",
-    src: "/patterns/flower.png",
+    height: 0.08,
   },
 ];
 

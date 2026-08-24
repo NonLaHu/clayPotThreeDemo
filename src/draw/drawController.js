@@ -26,7 +26,6 @@ let paintTexture = null;
 const PAINT_RESOLUTION = 2048;
 
 let stampHighlight = null;
-const STAMP_HEIGHT = 0.10;
 
 let selectedPattern = null;
 let patternTexture = null;
@@ -112,7 +111,7 @@ function updateStampHighlight(
     potBox.min.y;
 
   const stampHeight =
-    STAMP_HEIGHT;
+    selectedPattern?.height ?? 0.10;
 
   // ----------------------------------------------------------
   // Vertical center from finger
@@ -538,10 +537,13 @@ function stampPattern(hit,pot) {
     potBox.max.y -
     potBox.min.y;
 
+  const stampHeight =
+    selectedPattern.height ?? 0.10;
+
   const patternHeight =
     Math.floor(
       canvasHeight *
-      (STAMP_HEIGHT / potHeight)
+      (stampHeight / potHeight)
     );
 
   // ----------------------------------------------------------
@@ -598,7 +600,7 @@ function stampPattern(hit,pot) {
 
   console.log(
     "STAMP HEIGHT:",
-    STAMP_HEIGHT
+    stampHeight
   );
 }
 

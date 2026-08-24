@@ -614,9 +614,9 @@
 }
 
 .pattern-image-placeholder.selected {
-  background: rgba(181, 101, 53, 0.2);
-  border-color: #b56535;
-  box-shadow: 0 0 12px rgba(181, 101, 53, 0.4);
+  transform: translateY(-4px);
+  border: 2px solid white;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
 }
 
 .placeholder-content {

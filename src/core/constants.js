@@ -40,11 +40,31 @@ export const PATTERNS = [
     src: "/patterns/flower.png",
   },
   {
-    id: "gg",
+    id: "flower2",
     src: "/patterns/flower.png",
   },
   {
-    id: "bb",
+    id: "flower3",
+    src: "/patterns/flower.png",
+  },
+    {
+    id: "flower3",
+    src: "/patterns/flower.png",
+  },
+    {
+    id: "flower3",
+    src: "/patterns/flower.png",
+  },
+    {
+    id: "flower3",
+    src: "/patterns/flower.png",
+  },
+    {
+    id: "flower3",
+    src: "/patterns/flower.png",
+  },
+    {
+    id: "flower3",
     src: "/patterns/flower.png",
   },
 ];

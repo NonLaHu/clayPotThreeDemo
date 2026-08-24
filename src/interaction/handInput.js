@@ -46,7 +46,6 @@ export function updateHandInput({
         hand,
         camera,
         pot,
-        geometry,
         targetFinger,
         finger,
       });

@@ -14,7 +14,10 @@ import {
   getHandRotationDegrees,
 } from "../interaction/gestures.js";
 
-import { updateGestureHUD } from "../UI/ui.js";
+import {
+  updateGestureHUD,
+  updatePatternSelectionUI,
+} from "../UI/ui.js";
 
 let paintCanvas = null;
 let paintContext = null;
@@ -23,7 +26,7 @@ let paintTexture = null;
 const PAINT_RESOLUTION = 2048;
 
 let stampHighlight = null;
-const STAMP_HEIGHT = 0.30;
+const STAMP_HEIGHT = 0.10;
 
 let selectedPattern = null;
 let patternTexture = null;
@@ -39,6 +42,15 @@ const MAX_UNDO_STEPS = 20;
 let patternPickerActive = false;
 let lastSpiderSign = false;
 let lastPinch = false;
+
+// ==========================================================
+// PATTERN ROTARY SELECTOR
+// ==========================================================
+
+let previousPickerAngle = null;
+let pickerRotationAccumulator = 0;
+
+const PICKER_STEP_ANGLE = 25;
 
 function createStampHighlight(scene, pot) {
   if (stampHighlight) {
@@ -201,29 +213,114 @@ export function undoPaint() {
   );
 }
 
-//selector
-function selectPatternFromAngle(angle) {
-  if (angle < 230 || angle > 350) {
+function updatePatternFromRotation(angle) {
+
+  // ----------------------------------------------------------
+  // First frame after picker activation
+  // ----------------------------------------------------------
+
+  if (previousPickerAngle === null) {
+    previousPickerAngle = angle;
     return;
   }
 
-  const normalizedAngle = angle - 230;
 
-  const sectorSize =
-    120 / PATTERNS.length;
+  // ----------------------------------------------------------
+  // Calculate rotation difference
+  // ----------------------------------------------------------
 
-  let index =
-    Math.floor(
-      normalizedAngle / sectorSize
-    );
+  let delta =
+    angle -
+    previousPickerAngle;
 
-  index = Math.min(
-    index,
-    PATTERNS.length - 1
-  );
 
-  setSelectedPattern(index);
+  // ----------------------------------------------------------
+  // Handle 0° / 360° wraparound
+  // ----------------------------------------------------------
+
+  if (delta > 180) {
+    delta -= 360;
+  }
+
+  if (delta < -180) {
+    delta += 360;
+  }
+
+
+  previousPickerAngle =
+    angle;
+
+
+  // ----------------------------------------------------------
+  // Accumulate rotation
+  // ----------------------------------------------------------
+
+  pickerRotationAccumulator +=
+    delta;
+
+
+  // ----------------------------------------------------------
+  // Clockwise → next pattern
+  // ----------------------------------------------------------
+
+  while (
+    pickerRotationAccumulator >=
+    PICKER_STEP_ANGLE
+  ) {
+
+    const currentIndex =
+      state.draw.selectedPatternIndex;
+
+    const nextIndex =
+      Math.min(
+        currentIndex + 1,
+        PATTERNS.length - 1
+      );
+
+    if (
+      nextIndex !== currentIndex
+    ) {
+      setSelectedPattern(
+        nextIndex
+      );
+    }
+
+    pickerRotationAccumulator -=
+      PICKER_STEP_ANGLE;
+  }
+
+
+  // ----------------------------------------------------------
+  // Counter-clockwise → previous pattern
+  // ----------------------------------------------------------
+
+  while (
+    pickerRotationAccumulator <=
+    -PICKER_STEP_ANGLE
+  ) {
+
+    const currentIndex =
+      state.draw.selectedPatternIndex;
+
+    const previousIndex =
+      Math.max(
+        currentIndex - 1,
+        0
+      );
+
+    if (
+      previousIndex !== currentIndex
+    ) {
+      setSelectedPattern(
+        previousIndex
+      );
+    }
+
+    pickerRotationAccumulator +=
+      PICKER_STEP_ANGLE;
+  }
 }
+
 function createPaintTexture(pot) {
   if (paintCanvas) {
     return;
@@ -360,8 +457,8 @@ function loadPattern(pattern) {
   );
 }
 
-//select
 function setSelectedPattern(index) {
+
   if (
     index < 0 ||
     index >= PATTERNS.length
@@ -369,13 +466,19 @@ function setSelectedPattern(index) {
     return;
   }
 
-  state.draw.selectedPatternIndex = index;
 
-  selectedPattern = PATTERNS[index];
+  state.draw.selectedPatternIndex =
+    index;
 
-  loadPattern(selectedPattern);
 
-  updatePatternUI(index);
+  selectedPattern =
+    PATTERNS[index];
+
+
+  loadPattern(
+    selectedPattern
+  );
+
 
   console.log(
     "Selected pattern:",
@@ -383,21 +486,6 @@ function setSelectedPattern(index) {
   );
 }
 
-// pattern ui
-function updatePatternUI(index) {
-  document
-    .querySelectorAll(".pattern-petal")
-    .forEach((petal) => {
-      petal.classList.remove("selected");
-    });
-
-  const petals =
-    document.querySelectorAll(".pattern-petal");
-
-  if (petals[index]) {
-    petals[index].classList.add("selected");
-  }
-}
 
 
 // ==========================================================
@@ -534,7 +622,6 @@ export function initDraw(
     selectedPattern
   );
 
-  updatePatternUI(0);
 }
 
 
@@ -562,7 +649,6 @@ export function updateDrawHandInput({
   hand,
   camera,
   pot,
-  geometry,
   targetFinger,
   finger,
 }) {
@@ -581,16 +667,26 @@ export function updateDrawHandInput({
   // ==========================================================
   // SPIDER-MAN SIGN → TOGGLE PATTERN PICKER
   // ==========================================================
-
   if (
     spiderSign &&
     !lastSpiderSign
   ) {
+
     patternPickerActive =
       !patternPickerActive;
 
     state.draw.patternPickerActive =
       patternPickerActive;
+
+
+    // ----------------------------------------------------------
+    // Reset rotary tracking
+    // ----------------------------------------------------------
+
+    previousPickerAngle = null;
+
+    pickerRotationAccumulator = 0;
+
 
     console.log(
       "Pattern picker:",
@@ -607,28 +703,61 @@ export function updateDrawHandInput({
   // ==========================================================
   // PATTERN PICKER MODE
   // ==========================================================
+if (patternPickerActive) {
 
-  if (patternPickerActive) {
-    lastPinch = false;
-
-    const angle =
-      getHandRotationDegrees(hand);
-
-    state.draw.patternPickerAngle =
-      angle;
-
-    selectPatternFromAngle(angle);
-
-    updateGestureHUD(
-      `Pattern Picker ${Math.round(angle)}°`,
-      "palette",
-    );
+  lastPinch = false;
 
 
-    finger.visible = false;
+  const angle =
+    getHandRotationDegrees(hand);
 
-    return;
+
+  state.draw.patternPickerAngle =
+    angle;
+
+
+  // ----------------------------------------------------------
+  // Rotary selection
+  // ----------------------------------------------------------
+
+  updatePatternFromRotation(
+    angle
+  );
+
+
+  // ----------------------------------------------------------
+  // UI feedback
+  // ----------------------------------------------------------
+
+  const selectedIndex =
+    state.draw.selectedPatternIndex;
+
+  const selected =
+    PATTERNS[
+      selectedIndex
+    ];
+
+
+  updateGestureHUD(
+    `Pattern ${selectedIndex + 1}/${PATTERNS.length} · ${selected.id}`,
+    "refresh-cw",
+  );
+
+
+  // ----------------------------------------------------------
+  // Hide drawing cursor
+  // ----------------------------------------------------------
+
+  if (stampHighlight) {
+    stampHighlight.visible =
+      false;
   }
+
+  finger.visible =
+    false;
+
+  return;
+}
 
 
   // ==========================================================

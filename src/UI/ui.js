@@ -1,7 +1,7 @@
 import "./ui.css";
 
 let currentIcon = "activity";
-
+import { PATTERNS } from "../core/constants.js";
 const SCULPT_ROOM = "sculpt_room";
 const PAINT_ROOM = "paint_room";
 const DRAW_ROOM = "draw";
@@ -524,59 +524,181 @@ export function updateGestureGuide(
 // =========================
 
 let onPatternSelect = null;
+let currentPatternIndex = 0;
+
+export function updatePatternSelectionUI(index) {
+  currentPatternIndex = index;
+
+  const patternOptions =
+    document.querySelectorAll(
+      ".pattern-image-placeholder"
+    );
+
+  patternOptions.forEach(
+    (option) => {
+      const optionIndex =
+        Number(
+          option.dataset.patternIndex
+        );
+
+      option.classList.toggle(
+        "selected",
+        optionIndex === index
+      );
+    }
+  );
+}
 
 export function setPatternSelectCallback(callback) {
   onPatternSelect = callback;
 }
-
 export function initPatternPanel() {
-  const patternPanel = document.getElementById("pattern-panel");
-  if (!patternPanel) return;
+  const patternPanel =
+    document.getElementById(
+      "pattern-panel"
+    );
 
-  // Initialize collapsible sections
-  const sectionHeaders = patternPanel.querySelectorAll(".pattern-section-header");
-  sectionHeaders.forEach(header => {
-    header.addEventListener("click", () => {
-      const section = header.closest(".pattern-section");
-      section.classList.toggle("collapsed");
-    });
-  });
-
-  // Initialize pattern selection
-  const patternOptions = patternPanel.querySelectorAll(".pattern-image-placeholder");
-  patternOptions.forEach(option => {
-    option.addEventListener("click", () => {
-      // Remove selected class from all options
-      patternOptions.forEach(opt => opt.classList.remove("selected"));
-      // Add selected class to clicked option
-      option.classList.add("selected");
-      
-      // Get pattern index
-      const patternIndex = parseInt(option.dataset.patternIndex);
-      console.log("Pattern selected:", patternIndex);
-      
-      // Call the pattern selection callback if available
-      if (onPatternSelect && typeof onPatternSelect === 'function') {
-        onPatternSelect(patternIndex);
-      }
-    });
-  });
-
-  // Initialize "See All" button
-  const seeAllBtn = patternPanel.querySelector(".see-all-btn");
-  if (seeAllBtn) {
-    seeAllBtn.addEventListener("click", () => {
-      console.log("See all patterns clicked");
-      // You could expand this to show more patterns or open a modal
-    });
+  if (!patternPanel) {
+    return;
   }
 
-  // Initialize feather icons for the panel
+  const patternGrid =
+    document.getElementById(
+      "pattern-grid"
+    );
+
+  if (!patternGrid) {
+    return;
+  }
+
+  // ==========================================================
+  // GENERATE PATTERN OPTIONS
+  // ==========================================================
+
+  patternGrid.innerHTML =
+    PATTERNS
+      .map(
+        (pattern, index) => `
+          <div
+            class="pattern-image-placeholder"
+            data-pattern-index="${index}"
+          >
+            <img
+              src="${pattern.src}"
+              alt="${pattern.id}"
+              draggable="false"
+            />
+
+            <div class="placeholder-content">
+              <span>${pattern.id}</span>
+            </div>
+          </div>
+        `
+      )
+      .join("");
+
+
+  // ==========================================================
+  // COLLAPSIBLE SECTIONS
+  // ==========================================================
+
+  const sectionHeaders =
+    patternPanel.querySelectorAll(
+      ".pattern-section-header"
+    );
+
+  sectionHeaders.forEach(
+    (header) => {
+      header.addEventListener(
+        "click",
+        () => {
+          const section =
+            header.closest(
+              ".pattern-section"
+            );
+
+          section.classList.toggle(
+            "collapsed"
+          );
+        }
+      );
+    }
+  );
+
+
+  // ==========================================================
+  // PATTERN SELECTION
+  // ==========================================================
+
+  const patternOptions =
+    patternGrid.querySelectorAll(
+      ".pattern-image-placeholder"
+    );
+
+  patternOptions.forEach(
+    (option) => {
+      option.addEventListener(
+        "click",
+        () => {
+
+          const patternIndex =
+            Number(
+              option.dataset.patternIndex
+            );
+
+          updatePatternSelectionUI(
+            patternIndex
+          );
+
+          console.log(
+            "Pattern selected:",
+            patternIndex
+          );
+
+          if (
+            onPatternSelect &&
+            typeof onPatternSelect ===
+              "function"
+          ) {
+            onPatternSelect(
+              patternIndex
+            );
+          }
+        }
+      );
+    }
+  );
+
+
+  // ==========================================================
+  // SEE ALL
+  // ==========================================================
+
+  const seeAllBtn =
+    patternPanel.querySelector(
+      ".see-all-btn"
+    );
+
+  if (seeAllBtn) {
+    seeAllBtn.addEventListener(
+      "click",
+      () => {
+        console.log(
+          "See all patterns clicked"
+        );
+      }
+    );
+  }
+
+
+  // ==========================================================
+  // FEATHER
+  // ==========================================================
+
   if (window.feather) {
     window.feather.replace();
   }
 }
-
 export function updateStageUI() {
   const undoButton =
     document.getElementById(

@@ -16,6 +16,12 @@ import {
 
 import { updateGestureHUD } from "../UI/ui.js";
 
+let paintCanvas = null;
+let paintContext = null;
+let paintTexture = null;
+
+const PAINT_RESOLUTION = 2048;
+
 let selectedPattern = null;
 let patternPreview = null;
 let patternTexture = null;
@@ -52,7 +58,51 @@ function selectPatternFromAngle(angle) {
   setSelectedPattern(index);
 }
 
+function createPaintTexture(pot) {
+  if (paintCanvas) {
+    return;
+  }
 
+  paintCanvas = document.createElement("canvas");
+
+  paintCanvas.width = PAINT_RESOLUTION;
+  paintCanvas.height = PAINT_RESOLUTION;
+
+  paintContext =
+    paintCanvas.getContext("2d");
+
+  paintContext.clearRect(
+    0,
+    0,
+    PAINT_RESOLUTION,
+    PAINT_RESOLUTION
+  );
+
+  paintTexture =
+    new THREE.CanvasTexture(
+      paintCanvas
+    );
+
+  paintTexture.colorSpace =
+    THREE.SRGBColorSpace;
+
+  paintTexture.wrapS =
+    THREE.RepeatWrapping;
+
+  paintTexture.wrapT =
+    THREE.ClampToEdgeWrapping;
+
+  paintTexture.minFilter =
+    THREE.LinearMipmapLinearFilter;
+
+  paintTexture.magFilter =
+    THREE.LinearFilter;
+
+  if (pot.material) {
+    pot.material.map = paintTexture;
+    pot.material.needsUpdate = true;
+  }
+}
 
 // ==========================================================
 // PATTERN LOADING
@@ -232,185 +282,132 @@ function hidePatternPreview() {
 // ==========================================================
 // STAMP
 // ==========================================================
-function stampPattern(hit, geometry, pot) {
-  if (!selectedPattern || !patternImage) {
+function stampPattern(hit) {
+  if (
+    !selectedPattern ||
+    !patternImage ||
+    !paintContext ||
+    !paintTexture
+  ) {
     return;
   }
 
-  const colors = geometry.attributes.color;
-  const positions = geometry.attributes.position;
-
-  const imageWidth = patternImage.width;
-  const imageHeight = patternImage.height;
-  const pixels = patternImage.data;
-
   // ----------------------------------------------------------
-  // Convert hit point from world space into pot local space
+  // Make sure the raycast gave us UV coordinates
   // ----------------------------------------------------------
 
-  const localHit = pot.worldToLocal(
-    hit.point.clone()
+  if (!hit.uv) {
+    console.warn(
+      "Pot geometry does not have UV coordinates."
+    );
+
+    return;
+  }
+
+  const canvasWidth =
+    paintCanvas.width;
+
+  const canvasHeight =
+    paintCanvas.height;
+
+  // ----------------------------------------------------------
+  // Hit UV → canvas position
+  // ----------------------------------------------------------
+
+  const centerX =
+    hit.uv.x * canvasWidth;
+
+  const centerY =
+    (1 - hit.uv.y) *
+    canvasHeight;
+
+  // ----------------------------------------------------------
+  // Pattern dimensions
+  //
+  // The pattern wraps around the ENTIRE pot.
+  //
+  // Therefore:
+  //
+  // pattern width  = entire canvas width
+  // pattern height = limited vertical band
+  // ----------------------------------------------------------
+
+  const patternHeight =
+    Math.floor(
+      canvasHeight * 0.30
+    );
+
+  // ----------------------------------------------------------
+  // Draw the pattern into a temporary canvas
+  // ----------------------------------------------------------
+
+  const sourceCanvas =
+    document.createElement("canvas");
+
+  sourceCanvas.width =
+    patternImage.width;
+
+  sourceCanvas.height =
+    patternImage.height;
+
+  const sourceContext =
+    sourceCanvas.getContext("2d");
+
+  sourceContext.drawImage(
+    patternImage,
+    0,
+    0
   );
 
   // ----------------------------------------------------------
-  // Determine the vertical size of the pattern
+  // We want the ORIGINAL pattern colors.
+  //
+  // No selectedColor is involved.
   // ----------------------------------------------------------
 
-  const patternHeight = 0.7;
-
-  const minY =
-    localHit.y - patternHeight / 2;
-
-  const maxY =
-    localHit.y + patternHeight / 2;
-
   // ----------------------------------------------------------
-  // Find approximate pot radius
+  // Resize the pattern so:
+  //
+  // X = full 360° circumference
+  // Y = limited height
   // ----------------------------------------------------------
 
-  let radius = 0;
+  const patternY =
+    centerY -
+    patternHeight / 2;
 
-  for (let i = 0; i < positions.count; i++) {
-    const x = positions.getX(i);
-    const z = positions.getZ(i);
+  paintContext.drawImage(
+    sourceCanvas,
 
-    radius = Math.max(
-      radius,
-      Math.sqrt(x * x + z * z)
-    );
-  }
+    // source
+    0,
+    0,
+    patternImage.width,
+    patternImage.height,
 
-  // ----------------------------------------------------------
-  // Paint every vertex around the complete circumference
-  // ----------------------------------------------------------
+    // destination
+    0,
+    patternY,
+    canvasWidth,
+    patternHeight
+  );
 
-  for (let i = 0; i < positions.count; i++) {
-    const x = positions.getX(i);
-    const y = positions.getY(i);
-    const z = positions.getZ(i);
-
-    // Height limitation
-    if (
-      y < minY ||
-      y > maxY
-    ) {
-      continue;
-    }
-
-    // Ignore vertices too far from the cylindrical surface
-    const vertexRadius =
-      Math.sqrt(x * x + z * z);
-
-    if (
-      Math.abs(vertexRadius - radius) > 0.12
-    ) {
-      continue;
-    }
-
-    // --------------------------------------------------------
-    // Convert vertex angle around pot to pattern X
-    // --------------------------------------------------------
-
-    let angle =
-      Math.atan2(z, x);
-
-    if (angle < 0) {
-      angle += Math.PI * 2;
-    }
-
-    // 0 → 1 around the entire pot
-    const u =
-      angle / (Math.PI * 2);
-
-    // --------------------------------------------------------
-    // Convert pot height to pattern Y
-    // --------------------------------------------------------
-
-    const v =
-      (y - minY) /
-      patternHeight;
-
-    if (
-      u < 0 ||
-      u > 1 ||
-      v < 0 ||
-      v > 1
-    ) {
-      continue;
-    }
-
-    // --------------------------------------------------------
-    // Get original PNG pixel
-    // --------------------------------------------------------
-
-    const px =
-      Math.floor(
-        u * (imageWidth - 1)
-      );
-
-    const py =
-      Math.floor(
-        (1 - v) *
-        (imageHeight - 1)
-      );
-
-    const pixelIndex =
-      (py * imageWidth + px) * 4;
-
-    const r =
-      pixels[pixelIndex] / 255;
-
-    const g =
-      pixels[pixelIndex + 1] / 255;
-
-    const b =
-      pixels[pixelIndex + 2] / 255;
-
-    const alpha =
-      pixels[pixelIndex + 3] / 255;
-
-    if (alpha <= 0) {
-      continue;
-    }
-
-    // --------------------------------------------------------
-    // Use ORIGINAL pattern color
-    // --------------------------------------------------------
-
-    const patternColor =
-      new THREE.Color(r, g, b);
-
-    const current =
-      new THREE.Color()
-        .fromBufferAttribute(
-          colors,
-          i
-        );
-
-    current.lerp(
-      patternColor,
-      alpha
-    );
-
-    colors.setXYZ(
-      i,
-      current.r,
-      current.g,
-      current.b
-    );
-  }
-
-  colors.needsUpdate = true;
+  paintTexture.needsUpdate = true;
 
   console.log(
-    "WRAPPED PATTERN:",
+    "TEXTURE PATTERN STAMP:",
     selectedPattern.id
   );
 }
 
 // init drawing
-export function initDraw(scene) {
+export function initDraw(
+  scene,
+  pot
+) {
   createPatternPreview(scene);
+
+  createPaintTexture(pot);
 
   // Select first pattern
   selectedPattern =
@@ -418,7 +415,9 @@ export function initDraw(scene) {
 
   state.draw.selectedPatternIndex = 0;
 
-  loadPattern(selectedPattern);
+  loadPattern(
+    selectedPattern
+  );
 
   updatePatternUI(0);
 }
@@ -657,9 +656,7 @@ export function updateDrawHandInput({
     );
 
     stampPattern(
-        hit,
-        geometry,
-        pot
+        hit
     );
     }
 

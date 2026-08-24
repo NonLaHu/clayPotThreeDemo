@@ -276,7 +276,7 @@ initUI({
         break;
 
       case ROOM_STATE.PAINT_ROOM:
-        initDraw(scene);
+        initDraw(scene,pot);
         transitionToDrawRoom();
         break;
 

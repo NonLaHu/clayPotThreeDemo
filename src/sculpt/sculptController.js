@@ -103,8 +103,8 @@ state.camera.targetAngle =
     palmX,
     0.15,
     0.85,
-    Math.PI,
     -Math.PI,
+    Math.PI,
   );
 
 state.camera.targetVerticalAngle =
@@ -112,8 +112,8 @@ state.camera.targetVerticalAngle =
     palmY,
     0.15,
     0.85,
-    -0.5,
-    0.8,
+    0.5,
+    -0.8,
   );
 
   state.camera.targetVerticalAngle =

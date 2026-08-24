@@ -57,26 +57,45 @@ function selectPatternFromAngle(angle) {
 
   setSelectedPattern(index);
 }
-
 function createPaintTexture(pot) {
   if (paintCanvas) {
     return;
   }
 
-  paintCanvas = document.createElement("canvas");
+  paintCanvas =
+    document.createElement("canvas");
 
-  paintCanvas.width = PAINT_RESOLUTION;
-  paintCanvas.height = PAINT_RESOLUTION;
+  paintCanvas.width =
+    PAINT_RESOLUTION;
+
+  paintCanvas.height =
+    PAINT_RESOLUTION;
 
   paintContext =
     paintCanvas.getContext("2d");
 
-  paintContext.clearRect(
+  // ----------------------------------------------------------
+  // Start with the pot's existing color
+  // ----------------------------------------------------------
+
+  const potColor =
+    pot.material.color;
+
+  const color =
+    `#${potColor.getHexString()}`;
+
+  paintContext.fillStyle = color;
+
+  paintContext.fillRect(
     0,
     0,
     PAINT_RESOLUTION,
     PAINT_RESOLUTION
   );
+
+  // ----------------------------------------------------------
+  // Create texture
+  // ----------------------------------------------------------
 
   paintTexture =
     new THREE.CanvasTexture(
@@ -98,10 +117,19 @@ function createPaintTexture(pot) {
   paintTexture.magFilter =
     THREE.LinearFilter;
 
+  // ----------------------------------------------------------
+  // Apply texture
+  // ----------------------------------------------------------
+
   if (pot.material) {
-    pot.material.map = paintTexture;
-    pot.material.needsUpdate = true;
+    pot.material.map =
+      paintTexture;
+
+    pot.material.needsUpdate =
+      true;
   }
+
+  paintTexture.needsUpdate = true;
 }
 
 // ==========================================================

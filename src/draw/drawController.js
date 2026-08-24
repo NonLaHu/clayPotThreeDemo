@@ -232,64 +232,103 @@ function hidePatternPreview() {
 // ==========================================================
 // STAMP
 // ==========================================================
-function stampPattern(hit, geometry) {
-    
+function stampPattern(hit, geometry, pot) {
   if (!selectedPattern || !patternImage) {
     return;
   }
 
-  const colors =
-    geometry.attributes.color;
+  const colors = geometry.attributes.color;
+  const positions = geometry.attributes.position;
 
-  const positions =
-    geometry.attributes.position;
+  const imageWidth = patternImage.width;
+  const imageHeight = patternImage.height;
+  const pixels = patternImage.data;
 
-  const imageWidth =
-    patternImage.width;
+  // ----------------------------------------------------------
+  // Convert hit point from world space into pot local space
+  // ----------------------------------------------------------
 
-  const imageHeight =
-    patternImage.height;
+  const localHit = pot.worldToLocal(
+    hit.point.clone()
+  );
 
-  const pixels =
-    patternImage.data;
+  // ----------------------------------------------------------
+  // Determine the vertical size of the pattern
+  // ----------------------------------------------------------
 
-  const center =
-    hit.point.clone();
+  const patternHeight = 0.7;
 
-  const radius = 0.35;
+  const minY =
+    localHit.y - patternHeight / 2;
 
-  const targetColor =
-    new THREE.Color(
-      state.paint.selectedColor
-    );
+  const maxY =
+    localHit.y + patternHeight / 2;
+
+  // ----------------------------------------------------------
+  // Find approximate pot radius
+  // ----------------------------------------------------------
+
+  let radius = 0;
 
   for (let i = 0; i < positions.count; i++) {
-    const vertex =
-      new THREE.Vector3(
-        positions.getX(i),
-        positions.getY(i),
-        positions.getZ(i),
-      );
+    const x = positions.getX(i);
+    const z = positions.getZ(i);
 
-    const distance =
-      vertex.distanceTo(center);
+    radius = Math.max(
+      radius,
+      Math.sqrt(x * x + z * z)
+    );
+  }
 
-    if (distance > radius) {
+  // ----------------------------------------------------------
+  // Paint every vertex around the complete circumference
+  // ----------------------------------------------------------
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const y = positions.getY(i);
+    const z = positions.getZ(i);
+
+    // Height limitation
+    if (
+      y < minY ||
+      y > maxY
+    ) {
       continue;
     }
 
-    // Normalize vertex position inside stamp
-    const dx =
-      (vertex.x - center.x) / radius;
+    // Ignore vertices too far from the cylindrical surface
+    const vertexRadius =
+      Math.sqrt(x * x + z * z);
 
-    const dy =
-      (vertex.y - center.y) / radius;
+    if (
+      Math.abs(vertexRadius - radius) > 0.12
+    ) {
+      continue;
+    }
 
+    // --------------------------------------------------------
+    // Convert vertex angle around pot to pattern X
+    // --------------------------------------------------------
+
+    let angle =
+      Math.atan2(z, x);
+
+    if (angle < 0) {
+      angle += Math.PI * 2;
+    }
+
+    // 0 → 1 around the entire pot
     const u =
-      (dx + 1) * 0.5;
+      angle / (Math.PI * 2);
+
+    // --------------------------------------------------------
+    // Convert pot height to pattern Y
+    // --------------------------------------------------------
 
     const v =
-      (dy + 1) * 0.5;
+      (y - minY) /
+      patternHeight;
 
     if (
       u < 0 ||
@@ -299,6 +338,10 @@ function stampPattern(hit, geometry) {
     ) {
       continue;
     }
+
+    // --------------------------------------------------------
+    // Get original PNG pixel
+    // --------------------------------------------------------
 
     const px =
       Math.floor(
@@ -314,6 +357,15 @@ function stampPattern(hit, geometry) {
     const pixelIndex =
       (py * imageWidth + px) * 4;
 
+    const r =
+      pixels[pixelIndex] / 255;
+
+    const g =
+      pixels[pixelIndex + 1] / 255;
+
+    const b =
+      pixels[pixelIndex + 2] / 255;
+
     const alpha =
       pixels[pixelIndex + 3] / 255;
 
@@ -321,31 +373,38 @@ function stampPattern(hit, geometry) {
       continue;
     }
 
+    // --------------------------------------------------------
+    // Use ORIGINAL pattern color
+    // --------------------------------------------------------
+
+    const patternColor =
+      new THREE.Color(r, g, b);
+
     const current =
       new THREE.Color()
         .fromBufferAttribute(
           colors,
-          i,
+          i
         );
 
     current.lerp(
-      targetColor,
-      alpha,
+      patternColor,
+      alpha
     );
 
     colors.setXYZ(
       i,
       current.r,
       current.g,
-      current.b,
+      current.b
     );
   }
 
   colors.needsUpdate = true;
 
   console.log(
-    "STAMP:",
-    selectedPattern.id,
+    "WRAPPED PATTERN:",
+    selectedPattern.id
   );
 }
 
@@ -600,6 +659,7 @@ export function updateDrawHandInput({
     stampPattern(
         hit,
         geometry,
+        pot
     );
     }
 

@@ -466,19 +466,23 @@ function setSelectedPattern(index) {
     return;
   }
 
-
+  // Update global state
   state.draw.selectedPatternIndex =
     index;
 
-
+  // Update actual pattern
   selectedPattern =
     PATTERNS[index];
 
-
+  // Load texture
   loadPattern(
     selectedPattern
   );
 
+  // ⭐ Update HTML pattern panel
+  updatePatternSelectionUI(
+    index
+  );
 
   console.log(
     "Selected pattern:",
@@ -612,15 +616,7 @@ export function initDraw(
     pot
   );
 
-  selectedPattern =
-    PATTERNS[0];
-
-  state.draw.selectedPatternIndex =
-    0;
-
-  loadPattern(
-    selectedPattern
-  );
+  setSelectedPattern(0);
 
 }
 

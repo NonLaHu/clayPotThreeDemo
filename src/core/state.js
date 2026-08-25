@@ -42,6 +42,10 @@ camera: {
     colorPickerAngle: 0,
     selectedColor: "#B56535",
     selectedColorIndex: 0,
+    colorLockStartTime: null,
+    colorLockActive: false,
+    colorLockDuration: 3000,
+    lastLockedColorIndex: null,
   },
 
   rooms : {

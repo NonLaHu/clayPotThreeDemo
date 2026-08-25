@@ -50,12 +50,23 @@ function selectColorFromAngle(angle) {
   const sectorSize = 120 / COLOR_COUNT;
   let index = Math.floor(normalizedAngle / sectorSize);
   index = Math.min(index, COLOR_COUNT - 1);
-  if (index === state.paint.selectedColorIndex) {
-    return;
+  
+  // Color lock timer logic
+  if (index !== state.paint.selectedColorIndex) {
+    // Color changed - reset timer
+    state.paint.selectedColorIndex = index;
+    state.paint.selectedColor = COLOR[index];
+    state.paint.lastLockedColorIndex = index;
+    state.paint.colorLockStartTime = performance.now();
+    state.paint.colorLockActive = true;
+    updateColorUI(state.paint.selectedColor);
+  } else if (!state.paint.colorLockActive) {
+    // First time entering this color - start timer
+    state.paint.colorLockStartTime = performance.now();
+    state.paint.colorLockActive = true;
+    state.paint.lastLockedColorIndex = index;
   }
-  state.paint.selectedColorIndex = index;
-  state.paint.selectedColor = COLOR[index];
-  updateColorUI(state.paint.selectedColor);
+  // If same color and timer active, continue existing timer
 }
 
 
@@ -146,7 +157,35 @@ export function updatePaintingHandInput({
     const angle = getHandRotationDegrees(hand);
     state.paint.colorPickerAngle = angle;
 
+    // Check if hand is out of valid angle range - reset timer
+    if (angle < 230 || angle > 350) {
+      state.paint.colorLockActive = false;
+      state.paint.colorLockStartTime = null;
+      state.paint.lastLockedColorIndex = null;
+    }
+
     selectColorFromAngle(angle);
+
+    // Check if Spider-Man sign - immediate lock and exit
+    if (spiderSign && !state.paint.lastSpiderSign) {
+      state.paint.colorPickerActive = false;
+      state.paint.colorLockActive = false;
+      state.paint.colorLockStartTime = null;
+      state.paint.lastLockedColorIndex = null;
+      console.log("Color locked via Spider-Man sign");
+    }
+
+    // Check if 5 seconds elapsed - auto-lock and exit
+    if (state.paint.colorLockActive && state.paint.colorLockStartTime) {
+      const elapsed = performance.now() - state.paint.colorLockStartTime;
+      if (elapsed >= state.paint.colorLockDuration) {
+        state.paint.colorPickerActive = false;
+        state.paint.colorLockActive = false;
+        state.paint.colorLockStartTime = null;
+        state.paint.lastLockedColorIndex = null;
+        console.log("Color auto-locked after 5 seconds");
+      }
+    }
 
     updateGestureHUD(
       `Color Picker ${Math.round(angle)}°`,

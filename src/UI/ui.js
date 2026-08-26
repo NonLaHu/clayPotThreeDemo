@@ -228,7 +228,7 @@ export function initUI({
         class="hud-btn primary"
       >
         <i data-feather="download"></i>
-        <span>Export PNG</span>
+        <span>Save</span>
       </button>
 
     </div>

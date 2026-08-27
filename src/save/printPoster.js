@@ -1,4 +1,4 @@
-import { renderSceneFrame, ensureLeagueGothic } from "./poster.js";
+import { renderSceneFrame, ensureLeagueGothic, drawRenderOnPlate } from "./poster.js";
 
 // Poster dimensions, matching the landscape border template (template.png).
 const POSTER_W = 1748;
@@ -24,7 +24,7 @@ function loadTemplate() {
     const img = new Image();
     img.onload = () => { _templateImg = img; resolve(img); };
     img.onerror = () => reject(new Error("Failed to load border template"));
-    img.src = "/template.png";
+    img.src = "/template-plate.png";
   });
 }
 
@@ -50,8 +50,8 @@ async function composePrintPoster(renderCanvas, creatorName) {
   // Draw border template.
   ctx.drawImage(template, 0, 0, POSTER_W, POSTER_H);
 
-  // Pot render into the cutout area (left photo box).
-  ctx.drawImage(renderCanvas, FRAME.left, FRAME.top, RENDER_W, RENDER_H);
+  // Pot render into the cutout area (left photo box), sitting on the plate.
+  drawRenderOnPlate(ctx, renderCanvas);
 
   // Creator name beside the "To:" label at the top-left of the card,
   // matching the template's label styling (League Gothic, #282c87).

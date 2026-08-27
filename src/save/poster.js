@@ -18,6 +18,17 @@ const FRAME = {
 const RENDER_W = POSTER_W - FRAME.left - FRAME.right;
 const RENDER_H = POSTER_H - FRAME.top - FRAME.bottom;
 
+// The plate template (template-plate.png) bakes a decorative plate into the
+// bottom of the photo box, on which the live pot should sit. These define
+// where the pot rests:
+//  - PLATE_TOP_Y: the plate's top surface in poster coordinates (y).
+//  - POT_BASE_RENDER_Y: the pot's base (front bottom edge) within the render
+//    canvas, measured from its top-left origin.
+// The render is drawn at its natural scale, vertically shifted so the pot's
+// base sits on the plate, and horizontally centered in the box.
+const PLATE_TOP_Y = 1076;
+const POT_BASE_RENDER_Y = 840;
+
 // Template image, loaded once and cached.
 let _templateImg = null;
 
@@ -27,7 +38,7 @@ function loadTemplate() {
     const img = new Image();
     img.onload = () => { _templateImg = img; resolve(img); };
     img.onerror = () => reject(new Error("Failed to load border template"));
-    img.src = "/template.png";
+    img.src = "/template-plate.png";
   });
 }
 
@@ -203,6 +214,25 @@ function isBlankPixels(pixels) {
 // ------------------------------------------------------------
 // Composite the bordered poster: template background, render, QR.
 // ------------------------------------------------------------
+
+// Draw the pot render onto a template that already has a plate in the box,
+// placing the pot so its base sits on the plate. The render keeps its natural
+// aspect, is vertically shifted so the base aligns with PLATE_TOP_Y, and
+// stays horizontally centered in the box. Transparent render rows below the
+// pot let the plate show through.
+export function drawRenderOnPlate(ctx, renderCanvas) {
+  const shiftY =
+    PLATE_TOP_Y - (FRAME.top + POT_BASE_RENDER_Y);
+
+  ctx.drawImage(
+    renderCanvas,
+    FRAME.left,
+    FRAME.top + shiftY,
+    RENDER_W,
+    RENDER_H,
+  );
+}
+
 async function composePoster(renderCanvas, id, boothLabel) {
   const template = await loadTemplate();
 
@@ -214,8 +244,8 @@ async function composePoster(renderCanvas, id, boothLabel) {
   // Draw border template.
   ctx.drawImage(template, 0, 0, POSTER_W, POSTER_H);
 
-  // Pot render into the cutout area (left photo box).
-  ctx.drawImage(renderCanvas, FRAME.left, FRAME.top, RENDER_W, RENDER_H);
+  // Pot render into the cutout area (left photo box), sitting on the plate.
+  drawRenderOnPlate(ctx, renderCanvas);
 
   // Save code, right-aligned below the "Project name" in the right panel
   // (project name sits at top-right, baseline ~y90; code goes right below).

@@ -2,7 +2,7 @@ import * as THREE from "three";
 
 import { formatSaveCode } from "./code.js";
 
-// Poster dimensions, matching the landscape border template (template.png).
+// Poster dimensions, matching the landscape border template (template-plate.png).
 const POSTER_W = 1748;
 const POSTER_H = 1240;
 

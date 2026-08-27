@@ -22,7 +22,7 @@ function build() {
       </p>
 
       <input
-        class="save-code-input"
+        class="save-code-input creator-name-input"
         id="creator-name-input"
         type="text"
         inputmode="text"

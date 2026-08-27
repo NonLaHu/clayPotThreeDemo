@@ -2,20 +2,63 @@ import * as THREE from "three";
 
 import { formatSaveCode } from "./code.js";
 
-// Poster dimensions (portrait). Poster frame adds padding around the render.
-const POSTER_W = 1080;
-const POSTER_H = 1350;
+// Poster dimensions, matching the landscape border template (template-plate.png).
+const POSTER_W = 1748;
+const POSTER_H = 1240;
 
-// Where the 3D render sits inside the poster.
+// Where the 3D render sits on the template: the pot photo box on the left.
+// The pot fills this cutout (left x=60, right x=741, top y=170, bottom y=1230).
 const FRAME = {
-  top: 150,
-  right: 90,
-  bottom: 250,
-  left: 90,
+  top: 170,
+  right: 1007,
+  bottom: 10,
+  left: 60,
 };
 
 const RENDER_W = POSTER_W - FRAME.left - FRAME.right;
 const RENDER_H = POSTER_H - FRAME.top - FRAME.bottom;
+
+// The plate template (template-plate.png) bakes a decorative plate into the
+// bottom of the photo box, on which the live pot should sit. These define
+// where the pot rests:
+//  - PLATE_TOP_Y: the plate's top surface in poster coordinates (y).
+//  - POT_BASE_RENDER_Y: the pot's base (front bottom edge) within the render
+//    canvas, measured from its top-left origin.
+// The render is drawn at its natural scale, vertically shifted so the pot's
+// base sits on the plate, and horizontally centered in the box.
+const PLATE_TOP_Y = 1076;
+const POT_BASE_RENDER_Y = 840;
+
+// Template image, loaded once and cached.
+let _templateImg = null;
+
+function loadTemplate() {
+  if (_templateImg) return Promise.resolve(_templateImg);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => { _templateImg = img; resolve(img); };
+    img.onerror = () => reject(new Error("Failed to load border template"));
+    img.src = "/template-plate.png";
+  });
+}
+
+// Best-effort webfont readiness: never blocks or rejects the export flow.
+// If League Gothic isn't ready in time (e.g. Google Fonts unavailable over
+// QUIC), we simply fall back to whatever font is available.
+export async function ensureLeagueGothic() {
+  try {
+    await Promise.race([
+      document.fonts.load("400 60px 'League Gothic'"),
+      new Promise((r) => setTimeout(r, 800)),
+    ]);
+    await Promise.race([
+      document.fonts.ready,
+      new Promise((r) => setTimeout(r, 200)),
+    ]);
+  } catch {
+    // ignore — fall back
+  }
+}
 
 /**
  * Snapshot of the live scene (pot on the table) at the current camera angle,
@@ -36,11 +79,10 @@ export async function renderPoster(opts) {
 // like the poster photo slot, then read the pixels back into a 2D canvas.
 // ------------------------------------------------------------
 export async function renderSceneFrame(renderer, scene, camera) {
-  // Gesture indicator overlays (finger pointer, paint highlight) are marked
-  // with userData.hideInPoster so they never appear in the saved photo, even
-  // though they are visible on the live booth display.
-  const hidden = [];
+  const previousBackground = scene.background;
+  scene.background = null;
 
+  const hidden = [];
   scene.traverse((obj) => {
     if (obj.visible && obj.userData && obj.userData.hideInPoster) {
       hidden.push(obj);
@@ -54,11 +96,12 @@ export async function renderSceneFrame(renderer, scene, camera) {
     for (const obj of hidden) {
       obj.visible = true;
     }
+    scene.background = previousBackground;
   }
 }
 
 async function renderSceneFramePixels(renderer, scene, camera) {
-  const posterCamera = makePosterCamera(camera);
+  const posterCamera = makePosterCamera();
 
   const target = new THREE.WebGLRenderTarget(RENDER_W, RENDER_H, {
     minFilter: THREE.LinearFilter,
@@ -121,7 +164,7 @@ function flipPixelsVertically(pixels, width, height) {
   return flipped;
 }
 
-function makePosterCamera(sourceCamera) {
+function makePosterCamera() {
   const posterCamera = new THREE.PerspectiveCamera(
     45,
     RENDER_W / RENDER_H,
@@ -129,19 +172,19 @@ function makePosterCamera(sourceCamera) {
     100,
   );
 
-  posterCamera.position.copy(sourceCamera.position);
-  posterCamera.rotation.copy(sourceCamera.rotation);
-  posterCamera.updateProjectionMatrix();
+  // Fixed angle so every pot cutout is captured from the same vantage
+  // point, regardless of how the user rotated the live camera. These match
+  // the app's default camera state (src/core/state.js).
+  const radius = 5;
+  const horizontal = 0.45;
+  const vertical = 0.18;
 
-  // Re-derive the look-at direction from the (possibly interpolated) main
-  // camera so the snapshot always faces the pot the way the user sees it.
-  const direction = new THREE.Vector3();
-  sourceCamera.getWorldDirection(direction);
-  posterCamera.lookAt(
-    sourceCamera.position.x + direction.x * 10,
-    sourceCamera.position.y + direction.y * 10,
-    sourceCamera.position.z + direction.z * 10,
+  posterCamera.position.set(
+    Math.sin(horizontal) * Math.cos(vertical) * radius,
+    1 + Math.sin(vertical) * radius,
+    Math.cos(horizontal) * Math.cos(vertical) * radius,
   );
+  posterCamera.lookAt(0, 1, 0);
   posterCamera.updateProjectionMatrix();
 
   return posterCamera;
@@ -169,82 +212,56 @@ function isBlankPixels(pixels) {
 }
 
 // ------------------------------------------------------------
-// Composite the bordered poster: background, frame, render, QR.
+// Composite the bordered poster: template background, render, QR.
 // ------------------------------------------------------------
+
+// Draw the pot render onto a template that already has a plate in the box,
+// placing the pot so its base sits on the plate. The render keeps its natural
+// aspect, is vertically shifted so the base aligns with PLATE_TOP_Y, and
+// stays horizontally centered in the box. Transparent render rows below the
+// pot let the plate show through.
+export function drawRenderOnPlate(ctx, renderCanvas) {
+  const shiftY =
+    PLATE_TOP_Y - (FRAME.top + POT_BASE_RENDER_Y);
+
+  ctx.drawImage(
+    renderCanvas,
+    FRAME.left,
+    FRAME.top + shiftY,
+    RENDER_W,
+    RENDER_H,
+  );
+}
+
 async function composePoster(renderCanvas, id, boothLabel) {
+  const template = await loadTemplate();
+
   const canvas = document.createElement("canvas");
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
 
-  // Tile background.
-  const bg = ctx.createLinearGradient(0, 0, 0, POSTER_H);
-  bg.addColorStop(0, "#f7efe2");
-  bg.addColorStop(1, "#ead9bf");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, POSTER_W, POSTER_H);
+  // Draw border template.
+  ctx.drawImage(template, 0, 0, POSTER_W, POSTER_H);
 
-  // Outer terracotta border.
-  ctx.strokeStyle = "#8b5a2b";
-  ctx.lineWidth = 14;
-  ctx.strokeRect(20, 20, POSTER_W - 40, POSTER_H - 40);
+  // Pot render into the cutout area (left photo box), sitting on the plate.
+  drawRenderOnPlate(ctx, renderCanvas);
 
-  // Inner cream frame.
-  ctx.strokeStyle = "#fff8dc";
-  ctx.lineWidth = 4;
-  ctx.strokeRect(
-    FRAME.left - 16,
-    FRAME.top - 72,
-    RENDER_W + 32,
-    RENDER_H + 92,
-  );
-
-  // Photo.
-  ctx.drawImage(renderCanvas, FRAME.left, FRAME.top - 16, RENDER_W, RENDER_H + 32);
-
-  // Header title.
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#5b3a1d";
-  ctx.font = "700 34px Georgia, serif";
-  ctx.fillText("Handmade Clay Pot", POSTER_W / 2, FRAME.top - 56);
-
-  // Subtitle.
-  ctx.fillStyle = "#8a6a4a";
-  ctx.font = "400 20px Georgia, serif";
-  ctx.fillText(
-    `Booth ${boothLabel || "Exhibition"}`,
-    POSTER_W / 2,
-    FRAME.top - 28,
-  );
-
-  // Footer: save code card.
+  // Save code, right-aligned below the "Project name" in the right panel
+  // (project name sits at top-right, baseline ~y90; code goes right below).
   const code = formatSaveCode(id);
 
-  const cardX = FRAME.left;
-  const cardY = POSTER_H - FRAME.bottom + 34;
-  const cardW = POSTER_W - FRAME.left - FRAME.right;
-  const cardH = 176;
+  const codeRight = 1685;
 
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(cardX, cardY, cardW, cardH);
+  await ensureLeagueGothic();
 
-  ctx.strokeStyle = "#e0cbb0";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(cardX, cardY, cardW, cardH);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#282c87";
+  ctx.font = "400 30px 'League Gothic', sans-serif";
+  ctx.fillText("SAVE CODE", codeRight, 130);
 
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#8a6a4a";
-  ctx.font = "600 15px ui-monospace, SFMono-Regular, Menlo, monospace";
-  ctx.fillText("YOUR SAVE CODE", cardX + cardW / 2, cardY + 38);
-
-  ctx.fillStyle = "#5b3a1d";
-  ctx.font = "700 46px ui-monospace, SFMono-Regular, Menlo, monospace";
-  ctx.fillText(code, cardX + cardW / 2, cardY + 100);
-
-  ctx.fillStyle = "#8a6a4a";
-  ctx.font = "400 15px Georgia, serif";
-  ctx.fillText("Keep this code to continue your pot later.", cardX + cardW / 2, cardY + 132);
-  ctx.fillText("Enter it in the 'Load Progress' button on the booth.", cardX + cardW / 2, cardY + 158);
+  ctx.font = "400 54px 'League Gothic', sans-serif";
+  ctx.fillText(code, codeRight, 185);
 
   return canvas.toDataURL("image/png");
 }

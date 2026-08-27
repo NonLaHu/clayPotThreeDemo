@@ -887,3 +887,70 @@ if (patternPickerActive) {
 
     lastPinch = pinchActive;
 }
+
+// ==========================================================
+// PATTERN STATE — SAVE / RESTORE
+// ==========================================================
+
+/**
+ * Snapshot of the stamped pattern layer (the paint/stamp texture applied to
+ * the pot) plus the currently selected pattern, for inclusion in a save file.
+ * Returns null when the paint canvas has not been created yet.
+ */
+export function getPatternState() {
+  if (!paintCanvas || !paintContext) {
+    return null;
+  }
+
+  return {
+    canvasData: paintCanvas.toDataURL("image/png"),
+    selectedIndex: state.draw.selectedPatternIndex,
+  };
+}
+
+/**
+ * Restore a previously saved pattern layer onto the pot. Recreates the paint
+ * canvas/texture if missing, re-attaches it to the material, reselects the
+ * saved pattern, and clears the undo history for a fresh start on load.
+ */
+export function restorePatternState(saved, pot) {
+  if (!saved || typeof saved.canvasData !== "string") {
+    return;
+  }
+
+  // Recreate texture state if this pot hasn't been initialized for drawing.
+  if (!paintCanvas || !paintTexture) {
+    createPaintTexture(pot);
+  }
+
+  if (!paintCanvas || !paintContext) {
+    return;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      paintContext.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+      paintContext.drawImage(img, 0, 0, paintCanvas.width, paintCanvas.height);
+
+      // Re-attach the texture to the pot material.
+      if (pot.material && paintTexture) {
+        pot.material.map = paintTexture;
+        pot.material.needsUpdate = true;
+        paintTexture.needsUpdate = true;
+      }
+
+      // Reselect the saved pattern if an index was provided.
+      if (typeof saved.selectedIndex === "number") {
+        setSelectedPattern(saved.selectedIndex);
+      }
+
+      // Fresh undo history on load.
+      paintHistory.length = 0;
+
+      resolve();
+    };
+    img.onerror = () => resolve();
+    img.src = saved.canvasData;
+  });
+}

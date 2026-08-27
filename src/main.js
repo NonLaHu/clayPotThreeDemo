@@ -7,7 +7,7 @@ import { initHand, detectHand } from "./hand.js";
 
 
 import {
-  selectPattern, initDraw
+  selectPattern, initDraw, getPatternState, restorePatternState
 } from "./draw/drawController.js";
 
 import {
@@ -126,6 +126,8 @@ state.rooms.paintingEnvironmentGroup = new THREE.Group();
 setupPaintingEnvironment(state.rooms.paintingEnvironmentGroup);
 state.rooms.paintingEnvironmentGroup.visible = false;
 scene.add(state.rooms.paintingEnvironmentGroup);
+state.rooms.sculptingEnvironmentGroup.userData.hideInPoster = true;
+state.rooms.paintingEnvironmentGroup.userData.hideInPoster = true;
 
 // CAMERA
 const camera = new THREE.PerspectiveCamera(
@@ -144,6 +146,7 @@ camera.lookAt(0, 1, 0);
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   preserveDrawingBuffer: true,
+  alpha: true,
 });
 
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -180,6 +183,7 @@ function updateCamera() {
 const { pot, geometry } = create();
 scene.add(pot);
 scene.add(ground);
+ground.userData.hideInPoster = true;
 scene.add(paintHighlight);
 scene.add(finger);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
@@ -196,6 +200,7 @@ const saveFlow = createSaveFlow({
   camera,
   geometry,
   getCameraAngle: () => state.camera.angle,
+  getPatternState,
   onRestore: (save) => {
     restorePotFromSave(save, geometry);
 
@@ -203,6 +208,11 @@ const saveFlow = createSaveFlow({
 
     for (let i = 0; i < pos.count * 3; i++) {
       clayPositions[i] = pos.array[i];
+    }
+
+    // Restore the stamped pattern layer (if the save included one).
+    if (save.patterns) {
+      restorePatternState(save.patterns, pot).then(() => {});
     }
 
     updateGestureHUD("Save loaded", "check");

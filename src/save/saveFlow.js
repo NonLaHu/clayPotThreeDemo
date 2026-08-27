@@ -23,6 +23,7 @@ export function createSaveFlow(options) {
     camera,
     geometry,
     getCameraAngle,
+    getPatternState,
     onRestore,
     boothLabel = "Exhibition",
   } = options;
@@ -31,13 +32,13 @@ export function createSaveFlow(options) {
     async exportCurrentWork() {
       showExportChoice({
         onQR: () => {
-          exportQR({ renderer, scene, camera, geometry, getCameraAngle, boothLabel })
+          exportQR({ renderer, scene, camera, geometry, getCameraAngle, getPatternState, boothLabel })
             .catch((error) => {
               console.error("QR export failed:", error);
             });
         },
         onPrint: () => {
-          exportPrint({ renderer, scene, camera, geometry, getCameraAngle, boothLabel })
+          exportPrint({ renderer, scene, camera, geometry, getCameraAngle, getPatternState, boothLabel })
             .catch((error) => {
               console.error("Print export failed:", error);
             });
@@ -81,9 +82,9 @@ export function createSaveFlow(options) {
 // Private helpers for the two export paths
 // ------------------------------------------------------------
 
-async function exportQR({ renderer, scene, camera, geometry, getCameraAngle, boothLabel }) {
+async function exportQR({ renderer, scene, camera, geometry, getCameraAngle, getPatternState, boothLabel }) {
   const angle = getCameraAngle();
-  const state = capturePotState(geometry);
+  const state = capturePotState(geometry, getPatternState?.());
   const { id } = await createSave({ ...state, angle });
   const poster = await renderPoster({ renderer, scene, camera, id, boothLabel });
   await uploadPhoto(id, poster);
@@ -91,13 +92,13 @@ async function exportQR({ renderer, scene, camera, geometry, getCameraAngle, boo
   return id;
 }
 
-async function exportPrint({ renderer, scene, camera, geometry, getCameraAngle, boothLabel }) {
+async function exportPrint({ renderer, scene, camera, geometry, getCameraAngle, getPatternState, boothLabel }) {
   const creatorName = await showCreatorNamePrompt();
 
   if (creatorName === null) return;
 
   const angle = getCameraAngle();
-  const state = capturePotState(geometry);
+  const state = capturePotState(geometry, getPatternState?.());
   await createSave({ ...state, angle });
   await printPoster({ renderer, scene, camera, creatorName });
 }

@@ -35,7 +35,8 @@ import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
 
 import { updateHandInput } from "./interaction/handInput.js";
-import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback } from "./UI/ui.js";
+import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer } from "./UI/ui.js";
+import { openGestureTest, closeGestureTest } from "./UI/gestureTest.js";
 
 import { createSaveFlow } from "./save/saveFlow.js";
 import { restorePotFromSave } from "./save/restorePot.js";
@@ -220,6 +221,11 @@ const saveFlow = createSaveFlow({
 });
 
 initUI({
+  // GESTURE TEST
+  onGestureTest: () => {
+    openGestureTest();
+  },
+
   // RESET
   onReset: () => {
     const confirmed = window.confirm(
@@ -301,10 +307,20 @@ initUI({
         );
     }
   },
+
+  // UNDO
+  onUndo: () => {
+    import("./draw/drawController.js").then(({ undoPaint }) => {
+      undoPaint();
+    });
+  },
 });
 
 // Initialize pattern panel
 initPatternPanel();
+
+// Initialize color lock timer UI
+createColorLockTimer();
 
 // Set up pattern selection callback (will be called after scene is ready)
 setPatternSelectCallback((patternIndex) => {
@@ -495,6 +511,16 @@ function animate() {
     state.sculpt.pinchActive = false;
     updateGestureHUD("Waiting for hand gesture...", "activity");
     stopSculptSound();
+  }
+
+  // COLOR LOCK TIMER UPDATE
+  if (state.paint.colorPickerActive && state.paint.colorLockActive && state.paint.colorLockStartTime) {
+    const elapsed = performance.now() - state.paint.colorLockStartTime;
+    const progress = Math.min(elapsed / state.paint.colorLockDuration, 1);
+    showColorLockTimer();
+    updateColorLockTimer(progress);
+  } else {
+    hideColorLockTimer();
   }
 
   // CAMERA

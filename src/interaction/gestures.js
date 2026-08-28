@@ -109,3 +109,23 @@ export function getHandRotationDegrees(hand) {
 
   return (angle + 360) % 360;
 }
+
+export function isFistGesture(hand) {
+  if (!isValidHand(hand)) return false;
+
+
+  const isIndexCurled = hand[8].y > hand[6].y;
+  const isMiddleCurled = hand[12].y > hand[10].y;
+  const isRingCurled = hand[16].y > hand[14].y;
+  const isPinkyCurled = hand[20].y > hand[18].y;
+
+  const thumbTip = hand[4];
+  const indexKnuckle = hand[5];
+  const thumbDistance = Math.hypot(
+    thumbTip.x - indexKnuckle.x,
+    thumbTip.y - indexKnuckle.y
+  );
+  const isThumbTucked = thumbDistance < 0.1;
+
+  return isIndexCurled && isMiddleCurled && isRingCurled && isPinkyCurled && isThumbTucked;
+}

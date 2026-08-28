@@ -2,6 +2,7 @@ import "./ui.css";
 
 let currentIcon = "activity";
 import { PATTERNS } from "../core/constants.js";
+import { state } from "../core/state.js";
 const SCULPT_ROOM = "sculpt_room";
 const PAINT_ROOM = "paint_room";
 const DRAW_ROOM = "draw";
@@ -95,6 +96,7 @@ export function initUI({
   onDone,
   onLoad,
   onUndo,
+  onGestureTest,
 }) {
   if (document.getElementById("ui-overlay")) return;
 
@@ -150,6 +152,20 @@ export function initUI({
         ></div>
 
       </div>
+
+
+      <!-- =========================
+           Gesture Test
+      ========================== -->
+
+      <button
+        id="gesture-test-btn"
+        class="hud-btn secondary"
+      >
+        <i data-feather="video"></i>
+
+        <span>Gesture Test</span>
+      </button>
 
     </div>
 
@@ -290,6 +306,23 @@ export function initUI({
     undoButton.addEventListener(
       "click",
       onUndo,
+    );
+  }
+
+
+  // =========================
+  // Gesture Test Button
+  // =========================
+
+  const gestureTestBtn =
+    document.getElementById(
+      "gesture-test-btn",
+    );
+
+  if (gestureTestBtn && onGestureTest) {
+    gestureTestBtn.addEventListener(
+      "click",
+      onGestureTest,
     );
   }
 
@@ -711,4 +744,58 @@ export function updateStageUI() {
 
   undoButton.style.display = "flex";
 
+}
+
+// =========================
+// Color Lock Timer UI
+// =========================
+
+export function createColorLockTimer() {
+  if (document.getElementById("color-lock-timer")) return;
+
+  const timerContainer = document.createElement("div");
+  timerContainer.id = "color-lock-timer";
+  timerContainer.className = "color-lock-timer";
+  
+  timerContainer.innerHTML = `
+    <svg class="timer-circle" viewBox="0 0 100 100">
+      <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+      <circle class="timer-progress" cx="50" cy="50" r="45"></circle>
+    </svg>
+    <div class="timer-text">5</div>
+  `;
+  
+  document.body.appendChild(timerContainer);
+}
+
+export function showColorLockTimer() {
+  const timer = document.getElementById("color-lock-timer");
+  if (timer) {
+    timer.style.display = "flex";
+  }
+}
+
+export function hideColorLockTimer() {
+  const timer = document.getElementById("color-lock-timer");
+  if (timer) {
+    timer.style.display = "none";
+  }
+}
+
+export function updateColorLockTimer(progress) {
+  const timer = document.getElementById("color-lock-timer");
+  if (!timer) return;
+  
+  const progressCircle = timer.querySelector(".timer-progress");
+  const timerText = timer.querySelector(".timer-text");
+  
+  // Update circular progress (stroke-dasharray: circumference, stroke-dashoffset)
+  const circumference = 2 * Math.PI * 45;
+  const offset = circumference * (1 - progress);
+  progressCircle.style.strokeDashoffset = offset;
+  
+  // Update countdown text using actual duration from state
+  const durationSeconds = state.paint.colorLockDuration / 1000;
+  const remainingSeconds = Math.ceil(durationSeconds * (1 - progress));
+  timerText.textContent = remainingSeconds;
 }

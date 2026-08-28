@@ -62,7 +62,7 @@ async function composePrintPoster(renderCanvas, creatorName) {
     ctx.textAlign = "left";
     ctx.fillStyle = "#282c87";
     ctx.font = "400 60px 'League Gothic', sans-serif";
-    ctx.fillText(creatorName, 175, 90);
+    ctx.fillText(creatorName, 90, 90);
   }
 
   return canvas.toDataURL("image/png");

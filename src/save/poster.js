@@ -27,7 +27,7 @@ const RENDER_H = POSTER_H - FRAME.top - FRAME.bottom;
 // The render is drawn at its natural scale, vertically shifted so the pot's
 // base sits on the plate, and horizontally centered in the box.
 const PLATE_TOP_Y = 1076;
-const POT_BASE_RENDER_Y = 840;
+const POT_BASE_RENDER_Y = 851;
 
 // Template image, loaded once and cached.
 let _templateImg = null;
@@ -66,11 +66,11 @@ export async function ensureLeagueGothic() {
  * Returns a PNG data URL.
  */
 export async function renderPoster(opts) {
-  const { renderer, scene, camera, id, boothLabel } = opts;
+  const { renderer, scene, camera, id, boothLabel, creatorName } = opts;
 
   const renderCanvas = await renderSceneFrame(renderer, scene, camera);
 
-  return composePoster(renderCanvas, id, boothLabel);
+  return composePoster(renderCanvas, id, boothLabel, creatorName);
 }
 
 // ------------------------------------------------------------
@@ -177,7 +177,9 @@ function makePosterCamera() {
   // the app's default camera state (src/core/state.js).
   const radius = 5;
   const horizontal = 0.45;
-  const vertical = 0.18;
+  // Tilt the view down from above (~20°) so the pot's top opening is visible,
+  // matching the raised perspective of the plate below the pot.
+  const vertical = 0.35;
 
   posterCamera.position.set(
     Math.sin(horizontal) * Math.cos(vertical) * radius,
@@ -233,7 +235,7 @@ export function drawRenderOnPlate(ctx, renderCanvas) {
   );
 }
 
-async function composePoster(renderCanvas, id, boothLabel) {
+async function composePoster(renderCanvas, id, boothLabel, creatorName) {
   const template = await loadTemplate();
 
   const canvas = document.createElement("canvas");
@@ -246,6 +248,17 @@ async function composePoster(renderCanvas, id, boothLabel) {
 
   // Pot render into the cutout area (left photo box), sitting on the plate.
   drawRenderOnPlate(ctx, renderCanvas);
+
+  // Creator name beside the "To:" label at the top-left of the card,
+  // matching the template's label styling (League Gothic, #282c87).
+  if (creatorName) {
+    await ensureLeagueGothic();
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#282c87";
+    ctx.font = "400 60px 'League Gothic', sans-serif";
+    ctx.fillText(creatorName, 90, 90);
+  }
 
   // Save code, right-aligned below the "Project name" in the right panel
   // (project name sits at top-right, baseline ~y90; code goes right below).

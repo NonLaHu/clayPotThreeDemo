@@ -83,10 +83,14 @@ export function createSaveFlow(options) {
 // ------------------------------------------------------------
 
 async function exportQR({ renderer, scene, camera, geometry, getCameraAngle, getPatternState, boothLabel }) {
+  const creatorName = await showCreatorNamePrompt();
+
+  if (creatorName === null) return;
+
   const angle = getCameraAngle();
   const state = capturePotState(geometry, getPatternState?.());
   const { id } = await createSave({ ...state, angle });
-  const poster = await renderPoster({ renderer, scene, camera, id, boothLabel });
+  const poster = await renderPoster({ renderer, scene, camera, id, boothLabel, creatorName });
   await uploadPhoto(id, poster);
   showSaveExport({ id });
   return id;

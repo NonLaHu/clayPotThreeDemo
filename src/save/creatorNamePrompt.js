@@ -18,7 +18,7 @@ function build() {
       <h2 class="save-export-title">Who made this?</h2>
 
       <p class="save-export-hint">
-        Enter your name to print on the poster.
+        Enter your name to show on the poster.
       </p>
 
       <input
@@ -34,7 +34,7 @@ function build() {
 
       <div class="save-confirm-actions">
         <button class="save-confirm-btn cancel" type="button">Cancel</button>
-        <button class="save-confirm-btn ok" type="button">Print</button>
+        <button class="save-confirm-btn ok" type="button">Save</button>
       </div>
     </div>
   `;

@@ -1,91 +1,71 @@
-import { renderSceneFrame } from "./poster.js";
+import { renderSceneFrame, ensureLeagueGothic, drawRenderOnPlate } from "./poster.js";
 
-const POSTER_W = 1080;
-const POSTER_H = 1350;
+// Poster dimensions, matching the landscape border template (template-plate.png).
+const POSTER_W = 1748;
+const POSTER_H = 1240;
 
+// Where the 3D render sits on the template: the pot photo box on the left.
+// The pot fills this cutout (left x=60, right x=741, top y=170, bottom y=1230).
 const FRAME = {
-  top: 150,
-  right: 90,
-  bottom: 250,
-  left: 90,
+  top: 170,
+  right: 1007,
+  bottom: 10,
+  left: 60,
 };
 
 const RENDER_W = POSTER_W - FRAME.left - FRAME.right;
 const RENDER_H = POSTER_H - FRAME.top - FRAME.bottom;
 
+let _templateImg = null;
+
+function loadTemplate() {
+  if (_templateImg) return Promise.resolve(_templateImg);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => { _templateImg = img; resolve(img); };
+    img.onerror = () => reject(new Error("Failed to load border template"));
+    img.src = "/template-plate.png";
+  });
+}
+
 /**
  * Render the pot scene into a print-friendly poster and open the browser's
- * native print dialog. The poster includes a decorative border, header,
- * the pot render, and the current date.
+ * native print dialog. The poster includes the border template, header,
+ * the pot render, creator name, and the current date.
  */
 export async function printPoster({ renderer, scene, camera, creatorName }) {
   const renderCanvas = await renderSceneFrame(renderer, scene, camera);
-  const posterDataUrl = composePrintPoster(renderCanvas, creatorName);
+  const posterDataUrl = await composePrintPoster(renderCanvas, creatorName);
   openPrintDialog(posterDataUrl);
 }
 
-function composePrintPoster(renderCanvas, creatorName) {
+async function composePrintPoster(renderCanvas, creatorName) {
+  const template = await loadTemplate();
+
   const canvas = document.createElement("canvas");
   canvas.width = POSTER_W;
   canvas.height = POSTER_H;
   const ctx = canvas.getContext("2d");
 
-  drawBackground(ctx);
-  drawBorder(ctx);
-  drawRender(ctx, renderCanvas);
-  drawHeader(ctx);
-  drawDate(ctx);
-  drawCreatorName(ctx, creatorName);
+  // Draw border template.
+  ctx.drawImage(template, 0, 0, POSTER_W, POSTER_H);
+
+  // Pot render into the cutout area (left photo box), sitting on the plate.
+  drawRenderOnPlate(ctx, renderCanvas);
+
+  // Creator name beside the "To:" label at the top-left of the card,
+  // matching the template's label styling (League Gothic, #282c87).
+  // Baseline and size align with the rendered "To:" glyphs (~40px tall).
+  if (creatorName) {
+    await ensureLeagueGothic();
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#282c87";
+    ctx.font = "400 60px 'League Gothic', sans-serif";
+    ctx.fillText(creatorName, 90, 90);
+  }
 
   return canvas.toDataURL("image/png");
-}
-
-function drawBackground(ctx) {
-  const bg = ctx.createLinearGradient(0, 0, 0, POSTER_H);
-  bg.addColorStop(0, "#f7efe2");
-  bg.addColorStop(1, "#ead9bf");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, POSTER_W, POSTER_H);
-}
-
-function drawBorder(ctx) {
-  ctx.strokeStyle = "#8b5a2b";
-  ctx.lineWidth = 14;
-  ctx.strokeRect(20, 20, POSTER_W - 40, POSTER_H - 40);
-}
-
-function drawRender(ctx, renderCanvas) {
-  ctx.drawImage(renderCanvas, FRAME.left, FRAME.top - 16, RENDER_W, RENDER_H + 32);
-}
-
-function drawHeader(ctx) {
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#5b3a1d";
-  ctx.font = "700 34px Georgia, serif";
-  ctx.fillText("Handmade Clay Pot", POSTER_W / 2, FRAME.top - 56);
-}
-
-function drawDate(ctx) {
-  const now = new Date();
-  const dateStr = now.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#8a6a4a";
-  ctx.font = "400 18px Georgia, serif";
-  ctx.fillText(dateStr, POSTER_W / 2, POSTER_H - FRAME.bottom + 80);
-}
-
-function drawCreatorName(ctx, name) {
-  if (!name) return;
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#8a6a4a";
-  ctx.font = "400 18px Georgia, serif";
-  ctx.fillText(`Created by: ${name}`, POSTER_W / 2, POSTER_H - FRAME.bottom + 112);
 }
 
 function openPrintDialog(posterDataUrl) {

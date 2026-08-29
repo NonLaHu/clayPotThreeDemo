@@ -191,6 +191,14 @@
   box-shadow: 0 0 0 3px rgba(216, 124, 70, 0.25);
 }
 
+/* Creator name field keeps the same input styling but preserves the
+   capital and small letters the user types (no forced uppercase). */
+.creator-name-input {
+  text-transform: none;
+  letter-spacing: 1px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
 .save-code-error {
   min-height: 18px;
   margin: 0 0 12px;

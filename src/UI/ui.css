@@ -85,6 +85,49 @@
   letter-spacing: 0.5px;
 }
 
+/* Consolidated icon actions inside the gesture widget */
+.gesture-widget-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.hud-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f3f4f6;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.hud-icon-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.hud-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.hud-icon-btn.active {
+  background: rgba(181, 101, 53, 0.35);
+  border-color: #d87c46;
+}
+
 /* Dropdown Menu Mechanics */
 .hud-dropdown-wrapper {
   position: relative;
@@ -217,6 +260,75 @@
 .icon-only svg {
   width: 18px;
   height: 18px;
+}
+
+/* Hamburger menu (top-right) */
+.hud-menu-wrapper {
+  position: relative;
+  pointer-events: auto;
+}
+
+.hud-menu-toggle {
+  height: 38px;
+}
+
+.hud-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: rgba(22, 22, 26, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 120;
+}
+
+.hud-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.hud-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #f3f4f6;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.hud-menu-item svg {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+}
+
+.hud-menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.hud-menu-item:active {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* Gesture Test Overlay */
@@ -449,4 +561,148 @@
   font-size: 24px;
   font-weight: 600;
   color: #f3f4f6;
+}
+
+/* =========================
+   Measurements readout
+   (bottom-right, above webcam preview)
+   ========================= */
+
+.measure-readout {
+  position: fixed;
+  bottom: 264px; /* above the ~240px-tall webcam preview + bottom margin */
+  right: 12px;
+  z-index: 150;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+.measure-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(18, 18, 20, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #f3f4f6;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  align-self: flex-end;
+  transition: all 0.2s ease;
+}
+
+.measure-chip:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.measure-chip.active {
+  border-color: #d87c46;
+}
+
+.measure-chip-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.measure-chip-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff8dc;
+  white-space: nowrap;
+}
+
+.measure-caret {
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.measure-chip.active .measure-caret {
+  transform: rotate(180deg);
+}
+
+/* Drop-up panel (opens upward from the chip) */
+.measure-dropup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 240px;
+  background: rgba(22, 22, 26, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 160;
+}
+
+.measure-dropup.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.measure-dropup-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #9ca3af;
+  padding: 4px 8px 8px;
+}
+
+.measure-dropup-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.measure-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #f3f4f6;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.measure-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.measure-row.active {
+  background: rgba(181, 101, 53, 0.24);
+}
+
+.measure-row-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #d1d5db;
+}
+
+.measure-row-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff8dc;
 }

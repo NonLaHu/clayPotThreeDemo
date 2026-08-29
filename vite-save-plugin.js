@@ -3,6 +3,9 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 const SAVE_DIR = path.resolve(process.cwd(), "saves");
+const THREE_BUILD_DIR = path.resolve(process.cwd(), "node_modules/three/build");
+const THREE_GLTF_DIR = path.resolve(process.cwd(), "node_modules/three/examples/jsm/exporters");
+const VIEWER_DIR = path.resolve(process.cwd(), "server");
 
 function ensureSaveDir() {
   fs.mkdirSync(SAVE_DIR, { recursive: true });
@@ -161,6 +164,11 @@ export function saveServerPlugin() {
           }
 
           const photoUrl = `/s/${id}/photo.png`;
+          const saveData = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
+          const saveJson = JSON.stringify(saveData)
+            .replace(/</g, "\\u003c")
+            .replace(/\u2028/g, "\\u2028")
+            .replace(/\u2029/g, "\\u2029");
           const html = `<!doctype html>
 <html lang="en">
   <head>
@@ -181,32 +189,120 @@ export function saveServerPlugin() {
         padding: 24px;
         gap: 20px;
       }
-      img { max-width: min(90vw, 480px); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.5); }
       h1 { font-size: 20px; font-weight: 600; }
-      a.download {
-        display: inline-block;
-        padding: 14px 28px;
+      .viewer {
+        position: relative;
+        width: min(90vw, 480px);
+        height: min(70vh, 480px);
+        border-radius: 12px;
+        overflow: hidden;
+        background: #241c15;
+        box-shadow: 0 12px 40px rgba(0,0,0,.5);
+        touch-action: none;
+      }
+      .viewer canvas { width: 100%; height: 100%; display: block; }
+      .viewer-hint {
+        position: absolute; top: 10px; left: 0; right: 0;
+        text-align: center; pointer-events: none;
+        font-size: 12px; color: #b9a98c;
+      }
+      .actions {
+        display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      }
+      a.download, button.download {
+        border: none; cursor: pointer;
+        display: inline-block; padding: 14px 28px;
         border-radius: 30px;
         background: linear-gradient(135deg, #8b5a2b 0%, #6b4423 100%);
         color: #fff8dc;
         text-decoration: none;
         font-weight: 600;
+        font-size: 15px;
         box-shadow: 0 4px 15px rgba(107, 68, 35, .4);
       }
       p.hint { font-size: 13px; color: #b9a98c; text-align: center; max-width: 340px; }
+      .dims {
+        display: flex; gap: 10px; flex-wrap: wrap;
+        justify-content: center; align-items: center;
+        font-size: 13px; color: #fff8dc;
+      }
+      .dims .dim-label { color: #b9a98c; text-transform: uppercase;
+        font-size: 10px; letter-spacing: .6px; }
+      .dim-row {
+        display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: 8px 16px; border-radius: 12px;
+        background: rgba(255,248,220,.05);
+        border: 1px solid rgba(255,248,220,.12);
+        min-width: 96px;
+      }
+      .dim-value { font-weight: 700; font-size: 14px; }
     </style>
   </head>
   <body>
     <h1>Your clay pot</h1>
-    <img src="${photoUrl}" alt="Your clay pot" />
-    <a class="download" href="${photoUrl}" download="clay-pot-${id}.png">Save photo</a>
-    <p class="hint">Save the photo to your device, then show the small QR code at its corner to the booth webcam to reload your pot.</p>
+    <div class="viewer">
+      <canvas id="viewer-canvas"></canvas>
+      <div class="viewer-hint">Drag to rotate · scroll to zoom</div>
+    </div>
+    <div class="actions">
+      <button class="download" id="dl-glb" type="button">Download 3D model (GLB)</button>
+      <a class="download" href="${photoUrl}" download="clay-pot-${id}.png">Save photo</a>
+    </div>
+    <div class="dims" id="pot-dims">
+      <div class="dim-row"><span class="dim-label">Height</span><span class="dim-value" id="dim-height">–</span></div>
+      <div class="dim-row"><span class="dim-label">Max Ø</span><span class="dim-value" id="dim-width">–</span></div>
+      <div class="dim-row"><span class="dim-label">Base Ø</span><span class="dim-value" id="dim-base">–</span></div>
+      <div class="dim-row"><span class="dim-label">Rim Ø</span><span class="dim-value" id="dim-rim">–</span></div>
+    </div>
+    <p class="hint">Drag the pot around, grab the 3D model, or save the photo. The small QR code at the poster's corner reloads your pot at the booth.</p>
+    <script id="save-data" type="application/json">${saveJson}</script>
+    <script type="module" src="/3d/viewer.js"></script>
   </body>
 </html>`;
 
           res.statusCode = 200;
           res.setHeader("Content-Type", "text/html; charset=utf-8");
           res.end(html);
+          return;
+        }
+
+        // ------------------------------------------------------------
+        // 3D viewer static assets
+        // ------------------------------------------------------------
+        if (req.method === "GET" && url === "/3d/three.module.js") {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/javascript");
+          res.end(fs.readFileSync(path.join(THREE_BUILD_DIR, "three.module.js")));
+          return;
+        }
+
+        if (req.method === "GET" && url === "/3d/three.core.js") {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/javascript");
+          res.end(fs.readFileSync(path.join(THREE_BUILD_DIR, "three.core.js")));
+          return;
+        }
+
+        if (req.method === "GET" && url === "/3d/GLTFExporter.js") {
+          const src = fs.readFileSync(
+            path.join(THREE_GLTF_DIR, "GLTFExporter.js"),
+            "utf8",
+          );
+
+          // The exporter imports the bare "three" specifier; rewrite it to the
+          // absolute module we serve so the browser can resolve it.
+          const rewritten = src.replace(/\bfrom\s+['"]three['"]\s*;/, "from '/3d/three.module.js';");
+
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/javascript");
+          res.end(rewritten);
+          return;
+        }
+
+        if (req.method === "GET" && url === "/3d/viewer.js") {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "text/javascript");
+          res.end(fs.readFileSync(path.join(VIEWER_DIR, "viewer.js")));
           return;
         }
 

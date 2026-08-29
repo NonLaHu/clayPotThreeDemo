@@ -16,6 +16,7 @@ import {
   drawHand,
 } from "./debug/debug.js";
 import { state } from "./core/state.js";
+import { measurePot } from "./core/measure.js";
 import {
   ROOM_STATE,
   PAINT,
@@ -35,7 +36,7 @@ import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
 
 import { updateHandInput } from "./interaction/handInput.js";
-import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer, createThumbsUpTimer, showThumbsUpTimer, hideThumbsUpTimer, updateThumbsUpTimer } from "./UI/ui.js";
+import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer, createThumbsUpTimer, showThumbsUpTimer, hideThumbsUpTimer, updateThumbsUpTimer, createMeasurementsReadout, updateMeasurementsUI } from "./UI/ui.js";
 import { openGestureTest, closeGestureTest } from "./UI/gestureTest.js";
 
 import { createSaveFlow } from "./save/saveFlow.js";
@@ -320,6 +321,13 @@ initUI({
       undoPaint();
     });
   },
+
+  // 3D VIEWER
+  onView3D: () => {
+    saveFlow.view3D().catch((error) => {
+      console.error("Open 3D viewer failed:", error);
+    });
+  },
 });
 
 // Initialize pattern panel
@@ -330,6 +338,9 @@ createColorLockTimer();
 
 // Initialize thumbs up timer UI
 createThumbsUpTimer();
+
+// Initialize measurements readout
+createMeasurementsReadout();
 
 // Set up pattern selection callback (will be called after scene is ready)
 setPatternSelectCallback((patternIndex) => {
@@ -470,8 +481,7 @@ if (sunflowerCenter) {
 }
 
 // CLAY UPDATE
-function updateClay() {
-  const radiusInput = Math.abs(state.sculpt.targetRadiusChange);
+function updateClay() {  const radiusInput = Math.abs(state.sculpt.targetRadiusChange);
   const heightInput = Math.abs(state.sculpt.targetHeightChange);
   const inputStrength = THREE.MathUtils.clamp(
     (radiusInput + heightInput) / (SCULPT.MAX_FORCE * 2),
@@ -496,6 +506,9 @@ function updateClay() {
 
 
 // ANIMATION
+let lastMeasureUpdate = 0;
+const MEASURE_UPDATE_INTERVAL = 5000; // update measurements ~every 5s to cut lag
+
 function animate() {
   requestAnimationFrame(animate);
   const video = getDebugVideo();
@@ -586,6 +599,13 @@ function animate() {
     updateWheelSound(WHEEL_SPEED / WHEEL_BASE_SPEED);
   } else {
     updateWheelSound(0);
+  }
+
+  // MEASUREMENTS (throttled to ~every 5s)
+  const nowMs = performance.now();
+  if (nowMs - lastMeasureUpdate >= MEASURE_UPDATE_INTERVAL) {
+    lastMeasureUpdate = nowMs;
+    updateMeasurementsUI(measurePot(geometry));
   }
 
   // RENDER

@@ -35,7 +35,7 @@ import { adjustColorBrightness } from "./scene/functions.js";
 import { deformClay } from "./sculpt/clayDeformer.js";
 
 import { updateHandInput } from "./interaction/handInput.js";
-import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer } from "./UI/ui.js";
+import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer, createThumbsUpTimer, showThumbsUpTimer, hideThumbsUpTimer, updateThumbsUpTimer } from "./UI/ui.js";
 import { openGestureTest, closeGestureTest } from "./UI/gestureTest.js";
 
 import { createSaveFlow } from "./save/saveFlow.js";
@@ -220,6 +220,33 @@ const saveFlow = createSaveFlow({
   },
 });
 
+// Store done callback for thumbs up timer
+let onDoneCallback = null;
+
+const doneAction = () => {
+  switch (state.room) {
+    case ROOM_STATE.SCULPT_ROOM:
+      transitionToPaintRoom();
+      break;
+
+    case ROOM_STATE.PAINT_ROOM:
+      initDraw(scene,pot);
+      transitionToDrawRoom();
+      break;
+
+    case ROOM_STATE.DRAW_ROOM:
+      console.log("Drawing complete");
+      location.reload();
+      break;
+
+    default:
+      console.warn(
+        "Unknown room state:",
+        state.room
+      );
+  }
+};
+
 initUI({
   // GESTURE TEST
   onGestureTest: () => {
@@ -285,28 +312,7 @@ initUI({
   },
 
   // DONE
-  onDone: () => {
-    switch (state.room) {
-      case ROOM_STATE.SCULPT_ROOM:
-        transitionToPaintRoom();
-        break;
-
-      case ROOM_STATE.PAINT_ROOM:
-        initDraw(scene,pot);
-        transitionToDrawRoom();
-        break;
-
-      case ROOM_STATE.DRAW_ROOM:
-        console.log("Drawing complete");
-        break;
-
-      default:
-        console.warn(
-          "Unknown room state:",
-          state.room
-        );
-    }
-  },
+  onDone: doneAction,
 
   // UNDO
   onUndo: () => {
@@ -321,6 +327,9 @@ initPatternPanel();
 
 // Initialize color lock timer UI
 createColorLockTimer();
+
+// Initialize thumbs up timer UI
+createThumbsUpTimer();
 
 // Set up pattern selection callback (will be called after scene is ready)
 setPatternSelectCallback((patternIndex) => {
@@ -509,7 +518,7 @@ function animate() {
   } else {
     state.sculpt.lastHeightY = null;
     state.sculpt.pinchActive = false;
-    updateGestureHUD("Waiting for hand gesture...", "activity");
+    updateGestureHUD("No Gesture", "Waiting...", "Sculpt Room", "activity");
     stopSculptSound();
   }
 
@@ -521,6 +530,26 @@ function animate() {
     updateColorLockTimer(progress);
   } else {
     hideColorLockTimer();
+  }
+
+  // THUMBS UP TIMER UPDATE
+  if (state.thumbsUp.thumbsUpActive && state.thumbsUp.thumbsUpStartTime) {
+    const elapsed = performance.now() - state.thumbsUp.thumbsUpStartTime;
+    const progress = Math.min(elapsed / state.thumbsUp.thumbsUpDuration, 1);
+    showThumbsUpTimer();
+    updateThumbsUpTimer(progress);
+    
+    // Trigger done action when timer completes
+    if (progress >= 1) {
+      state.thumbsUp.thumbsUpActive = false;
+      state.thumbsUp.thumbsUpStartTime = null;
+      hideThumbsUpTimer();
+      
+      // Trigger done action
+      doneAction();
+    }
+  } else {
+    hideThumbsUpTimer();
   }
 
   // CAMERA

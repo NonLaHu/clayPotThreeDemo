@@ -737,7 +737,9 @@ if (patternPickerActive) {
 
 
   updateGestureHUD(
+    "Spider-Man",
     `Pattern ${selectedIndex + 1}/${PATTERNS.length} · ${selected.id}`,
+    "Draw Room",
     "refresh-cw",
   );
 
@@ -768,7 +770,9 @@ if (patternPickerActive) {
     pinch <= 0.5
   ) {
     updateGestureHUD(
-      "Rotating Camera",
+      "Open Palm",
+      "Camera Rotation",
+      "Draw Room",
       "edit-3",
     );
 
@@ -876,7 +880,9 @@ if (patternPickerActive) {
 
     if (pinchActive && !lastPinch) {
     updateGestureHUD(
+        "Pinch",
         "Pattern Stamped",
+        "Draw Room",
         "check",
     );
 

@@ -188,7 +188,9 @@ export function updatePaintingHandInput({
     }
 
     updateGestureHUD(
-      `Color Picker ${Math.round(angle)}°`,
+      "Spider-Man",
+      `Color Selection ${Math.round(angle)}°`,
+      "Paint Room",
       "palette",
     );
 
@@ -215,7 +217,9 @@ export function updatePaintingHandInput({
     pinch <= 0.5
   ) {
     updateGestureHUD(
-      "Rotating Camera",
+      "Open Palm",
+      "Camera Rotation",
+      "Paint Room",
       "edit-3",
     );
 
@@ -301,7 +305,7 @@ state.camera.targetVerticalAngle =
   // ==========================================================
 
   if (pinch > 0.5 && !openPalm) {
-    updateGestureHUD("Painting", "paintbrush");
+    updateGestureHUD("Pinch", "Painting", "Paint Room", "paintbrush");
     paintHorizontalRing(paintY,geometry);
   }
 

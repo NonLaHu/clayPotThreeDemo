@@ -129,3 +129,20 @@ export function isFistGesture(hand) {
 
   return isIndexCurled && isMiddleCurled && isRingCurled && isPinkyCurled && isThumbTucked;
 }
+
+export function isThumbsUpGesture(hand) {
+  if (!isValidHand(hand)) return false;
+
+  // Check thumb is extended upward (thumb tip above thumb base)
+  const thumbTip = hand[4];
+  const thumbBase = hand[2];
+  const isThumbExtended = thumbTip.y < thumbBase.y;
+
+  // Check all other fingers are curled (tips below knuckles)
+  const isIndexCurled = hand[8].y > hand[6].y;
+  const isMiddleCurled = hand[12].y > hand[10].y;
+  const isRingCurled = hand[16].y > hand[14].y;
+  const isPinkyCurled = hand[20].y > hand[18].y;
+
+  return isThumbExtended && isIndexCurled && isMiddleCurled && isRingCurled && isPinkyCurled;
+}

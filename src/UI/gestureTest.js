@@ -9,6 +9,7 @@ import {
   isPointingGesture,
   isSpiderManSign,
   isFistGesture,
+  isThumbsUpGesture,
   getPinchStrength,
   getHandRotationDegrees
 } from "../interaction/gestures.js";
@@ -62,6 +63,10 @@ function createGestureTestOverlay() {
           <span class="gesture-name">Fist</span>
           <span class="gesture-indicator" id="indicator-fistGesture">❌</span>
         </div>
+        <div class="gesture-result-card" id="result-thumbsUpGesture">
+          <span class="gesture-name">Thumbs Up</span>
+          <span class="gesture-indicator" id="indicator-thumbsUpGesture">❌</span>
+        </div>
         <div class="gesture-result-card">
           <span class="gesture-name">Pinch Strength</span>
           <span class="gesture-value" id="value-pinchStrength">0.00</span>
@@ -89,6 +94,7 @@ function updateGestureResults(hand) {
   const pointingGesture = isPointingGesture(hand);
   const spiderManSign = isSpiderManSign(hand);
   const fistGesture = isFistGesture(hand);
+  const thumbsUp = isThumbsUpGesture(hand);
   const pinchStrength = getPinchStrength(hand);
   const handRotation = getHandRotationDegrees(hand);
   
@@ -97,6 +103,7 @@ function updateGestureResults(hand) {
   updateIndicator('pointingGesture', pointingGesture);
   updateIndicator('spiderManSign', spiderManSign);
   updateIndicator('fistGesture', fistGesture);
+  updateIndicator('thumbsUpGesture', thumbsUp);
   
   document.getElementById('value-pinchStrength').textContent = pinchStrength.toFixed(2);
   document.getElementById('value-handRotation').textContent = Math.round(handRotation) + '°';

@@ -12,7 +12,8 @@ The project lets users interact with a virtual clay pot using hand gestures. The
 * 👌 Pinch → adjust clay radius
 * ✌️ Two-finger gesture → stretch/compress clay height
 * 🖐️ Open palm → rotate camera
-* 🖱️ Mouse drag → manual sculpting
+* � Thumbs up → proceed to next room (done button)
+* �🖱️ Mouse drag → manual sculpting
 * 🔄 Reset → restore the original clay shape
 * 📸 Export → save the current pot as a PNG screenshot
 
@@ -229,7 +230,49 @@ Camera movement is smoothed to prevent abrupt movement.
 
 ---
 
-# 5. 🖱️ Mouse Sculpting
+# 5. 👍 Thumbs Up — Done Button
+
+### Gesture
+
+Raise your thumb while keeping other fingers curled:
+
+```text
+👍
+```
+
+Detected configuration:
+
+```text
+Thumb   → Extended upward
+Index   → Closed
+Middle  → Closed
+Ring    → Closed
+Pinky   → Closed
+```
+
+Action:
+
+```text
+Hold thumbs up for 2 seconds
+        ↓
+Trigger done action
+```
+
+The thumbs up gesture is used to transition between rooms:
+
+```text
+Sculpt Room → Paint Room → Draw Room
+```
+
+A circular timer shows the 2-second countdown when the gesture is detected.
+
+**Note**: Thumbs up is disabled in two scenarios:
+1. During color selection mode in the paint room (to prevent accidental room transitions while selecting colors)
+2. When pinch strength is above 0.01 (to prevent accidental room transitions while actively sculpting with pinch gesture)
+
+---
+
+# 6. 🖱️ Mouse Sculpting
 
 Hand tracking is not required for basic mouse interaction.
 
@@ -278,11 +321,15 @@ The gesture system uses a priority order to prevent multiple controls from fight
       ↓
    Camera control
 
-4. Pointing gesture
+4. Thumbs up
+      ↓
+   Done button (room transition)
+
+5. Pointing gesture
       ↓
    Sculpting position
 
-5. Unknown gesture
+6. Unknown gesture
       ↓
    No dedicated gesture action
 ```
@@ -295,6 +342,8 @@ PINCH
 HEIGHT
   >
 OPEN PALM
+  >
+THUMBS UP
   >
 POINTING
 ```

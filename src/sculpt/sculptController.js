@@ -25,7 +25,7 @@ export function updateSculptHandInput({
 
   // PINCH
   if (pinch > 0.5) {
-    updateGestureHUD("Adjusting Radius", "minimize-2");
+    updateGestureHUD("Pinch", "Radius Control", "Sculpt Room", "minimize-2");
 
     state.sculpt.lastHeightY = null;
 
@@ -49,7 +49,7 @@ export function updateSculptHandInput({
 
   // HEIGHT
   if (heightGesture && pinch <= 0.5) {
-    updateGestureHUD("Stretching Height", "maximize-2");
+    updateGestureHUD("Two-Finger", "Height Control", "Sculpt Room", "maximize-2");
 
     const middle = hand[12];
 
@@ -76,7 +76,9 @@ export function updateSculptHandInput({
     pinch <= 0.5
   ) {
     updateGestureHUD(
-      "Rotating Camera",
+      "Open Palm",
+      "Camera Rotation",
+      "Sculpt Room",
       "edit-3",
     );
 
@@ -131,7 +133,7 @@ state.camera.targetVerticalAngle =
 
   // POINTING
   if (pointing && pinch <= 0.5 && !heightGesture && !openPalm) {
-    updateGestureHUD("Sculpting Point Active", "target");
+    updateGestureHUD("Pointing", "Sculpting Position", "Sculpt Room", "target");
   }
 
   // FINGER RAYCAST

@@ -119,9 +119,17 @@ export function initUI({
           class="hud-icon"
         ></i>
 
-        <span id="gesture-text">
-          Waiting for hand gesture...
-        </span>
+        <div class="gesture-info">
+          <span id="gesture-name" class="gesture-name">
+            No Gesture
+          </span>
+          <span id="gesture-mode" class="gesture-mode">
+            Waiting...
+          </span>
+          <span id="gesture-room" class="gesture-room">
+            Sculpt Room
+          </span>
+        </div>
       </div>
 
 
@@ -484,44 +492,31 @@ export function initUI({
 // =========================
 
 export function updateGestureHUD(
-  message,
+  gestureName = "No Gesture",
+  mode = "Waiting...",
+  room = "Sculpt Room",
   iconName = "activity",
 ) {
-  const textEl =
-    document.getElementById(
-      "gesture-text",
-    );
+  const gestureNameEl = document.getElementById("gesture-name");
+  const gestureModeEl = document.getElementById("gesture-mode");
+  const gestureRoomEl = document.getElementById("gesture-room");
+  const iconEl = document.getElementById("hud-status-icon");
 
-  const iconEl =
-    document.getElementById(
-      "hud-status-icon",
-    );
-
-
-  if (
-    textEl &&
-    textEl.textContent !== message
-  ) {
-    textEl.textContent =
-      message;
+  if (gestureNameEl && gestureNameEl.textContent !== gestureName) {
+    gestureNameEl.textContent = gestureName;
   }
 
+  if (gestureModeEl && gestureModeEl.textContent !== mode) {
+    gestureModeEl.textContent = mode;
+  }
 
-  if (
-    iconEl &&
-    currentIcon !== iconName
-  ) {
+  if (gestureRoomEl && gestureRoomEl.textContent !== room) {
+    gestureRoomEl.textContent = room;
+  }
 
-    currentIcon =
-      iconName;
-
-
-    iconEl.setAttribute(
-      "data-feather",
-      iconName,
-    );
-
-
+  if (iconEl && currentIcon !== iconName) {
+    currentIcon = iconName;
+    iconEl.setAttribute("data-feather", iconName);
     if (window.feather) {
       window.feather.replace();
     }
@@ -796,6 +791,60 @@ export function updateColorLockTimer(progress) {
   
   // Update countdown text using actual duration from state
   const durationSeconds = state.paint.colorLockDuration / 1000;
+  const remainingSeconds = Math.ceil(durationSeconds * (1 - progress));
+  timerText.textContent = remainingSeconds;
+}
+
+// =========================
+// Thumbs Up Timer UI
+// =========================
+
+export function createThumbsUpTimer() {
+  if (document.getElementById("thumbs-up-timer")) return;
+
+  const timerContainer = document.createElement("div");
+  timerContainer.id = "thumbs-up-timer";
+  timerContainer.className = "thumbs-up-timer";
+  
+  timerContainer.innerHTML = `
+    <svg class="thumbs-up-timer-circle" viewBox="0 0 100 100">
+      <circle class="thumbs-up-timer-bg" cx="50" cy="50" r="45"></circle>
+      <circle class="thumbs-up-timer-progress" cx="50" cy="50" r="45"></circle>
+    </svg>
+    <div class="thumbs-up-timer-text">2</div>
+  `;
+  
+  document.body.appendChild(timerContainer);
+}
+
+export function showThumbsUpTimer() {
+  const timer = document.getElementById("thumbs-up-timer");
+  if (timer) {
+    timer.style.display = "flex";
+  }
+}
+
+export function hideThumbsUpTimer() {
+  const timer = document.getElementById("thumbs-up-timer");
+  if (timer) {
+    timer.style.display = "none";
+  }
+}
+
+export function updateThumbsUpTimer(progress) {
+  const timer = document.getElementById("thumbs-up-timer");
+  if (!timer) return;
+  
+  const progressCircle = timer.querySelector(".thumbs-up-timer-progress");
+  const timerText = timer.querySelector(".thumbs-up-timer-text");
+  
+  // Update circular progress
+  const circumference = 2 * Math.PI * 45;
+  const offset = circumference * (1 - progress);
+  progressCircle.style.strokeDashoffset = offset;
+  
+  // Update countdown text
+  const durationSeconds = state.thumbsUp.thumbsUpDuration / 1000;
   const remainingSeconds = Math.ceil(durationSeconds * (1 - progress));
   timerText.textContent = remainingSeconds;
 }

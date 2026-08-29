@@ -52,4 +52,10 @@ camera: {
     sculptingEnvironmentGroup: null,
     paintingEnvironmentGroup: null,
   },
+
+  thumbsUp: {
+    thumbsUpStartTime: null,
+    thumbsUpActive: false,
+    thumbsUpDuration: 2000,
+  },
 };

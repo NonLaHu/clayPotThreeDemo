@@ -61,6 +61,30 @@
   justify-content: center;
 }
 
+.gesture-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gesture-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #f3f4f6;
+}
+
+.gesture-mode {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.gesture-room {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Dropdown Menu Mechanics */
 .hud-dropdown-wrapper {
   position: relative;
@@ -379,6 +403,48 @@
 }
 
 .timer-text {
+  position: absolute;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+
+/* Thumbs Up Timer */
+.thumbs-up-timer {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 80px;
+  height: 80px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.thumbs-up-timer-circle {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.thumbs-up-timer-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 6;
+}
+
+.thumbs-up-timer-progress {
+  fill: none;
+  stroke: #b56535;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-dasharray: 283;
+  stroke-dashoffset: 283;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+.thumbs-up-timer-text {
   position: absolute;
   font-size: 24px;
   font-weight: 600;

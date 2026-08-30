@@ -1,12 +1,14 @@
 import { createSave, uploadPhoto, fetchSave } from "./saveApi.js";
 import { renderPoster } from "./poster.js";
-import { showSaveExport, showExportChoice } from "./exportOverlay.js";
+import { showSaveExport, showExportChoice, showViewerChoice } from "./exportOverlay.js";
 import { showLoadConfirm } from "./loadConfirm.js";
 import { showLoadCode } from "./loadCode.js";
 import { codeToId } from "./code.js";
 import { capturePotState } from "./restorePot.js";
 import { printPoster } from "./printPoster.js";
 import { showCreatorNamePrompt } from "./creatorNamePrompt.js";
+import { downloadGLB } from "./export3d.js";
+import { makeSaveUrl } from "./qr.js";
 
 /**
  * Ties together the save flow:
@@ -43,6 +45,7 @@ export function createSaveFlow(options) {
               console.error("Print export failed:", error);
             });
         },
+        onGLB: () => exportsGLBFlow({ geometry, getPatternState }),
       });
     },
 
@@ -75,7 +78,52 @@ export function createSaveFlow(options) {
         },
       });
     },
+
+    // Opens the standalone 3D viewer page. Asks first whether to view the
+    // current pot (saves it on the fly, then opens it) or load a saved pot by
+    // code.
+    view3D() {
+      return showViewerChoice({
+        onCurrentPot: () => {
+          viewCurrentIn3D({
+            geometry,
+            getCameraAngle,
+            getPatternState,
+          }).catch((error) => {
+            console.error("Open 3D viewer for current pot failed:", error);
+          });
+        },
+        onLoadPot: () => {
+          loadPotIn3D().catch((error) => {
+            console.error("Load pot in 3D viewer failed:", error);
+          });
+        },
+      });
+    },
   };
+}
+
+// Saves the current pot, then opens its 3D viewer page in a new tab.
+async function viewCurrentIn3D({ geometry, getCameraAngle, getPatternState }) {
+  const angle = getCameraAngle();
+  const state = capturePotState(geometry, getPatternState?.());
+  const { id } = await createSave({ ...state, angle });
+
+  const viewerUrl = await makeSaveUrl(`/s/${id}`);
+  window.open(viewerUrl, "_blank", "noopener,noreferrer");
+  return id;
+}
+
+// Prompts for a save code, then opens that pot in the 3D viewer page.
+function loadPotIn3D() {
+  return showLoadCode({
+    onLoad: async (rawCode) => {
+      const id = codeToId(rawCode);
+      const viewerUrl = await makeSaveUrl(`/s/${id}`);
+      window.open(viewerUrl, "_blank", "noopener,noreferrer");
+      return true;
+    },
+  });
 }
 
 // ------------------------------------------------------------
@@ -105,4 +153,14 @@ async function exportPrint({ renderer, scene, camera, geometry, getCameraAngle, 
   const state = capturePotState(geometry, getPatternState?.());
   await createSave({ ...state, angle });
   await printPoster({ renderer, scene, camera, creatorName });
+}
+
+function exportsGLBFlow({ geometry, getPatternState }) {
+  const state = capturePotState(geometry, getPatternState?.());
+  return downloadGLB({
+    positions: state.positions,
+    colors: state.colors,
+    patterns: state.patterns,
+    id: "export",
+  });
 }

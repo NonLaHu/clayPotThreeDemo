@@ -5,6 +5,7 @@ import { formatSaveCode } from "./code.js";
 
 let choiceOverlay = null;
 let qrOverlay = null;
+let viewerOverlay = null;
 
 // ------------------------------------------------------------
 // Choice popup: QR Code | Print
@@ -33,6 +34,10 @@ function buildChoiceOverlay() {
           <i data-feather="printer"></i>
           <span>Print</span>
         </button>
+        <button class="export-choice-btn" id="export-glb-btn" type="button">
+          <i data-feather="box"></i>
+          <span>3D Model (GLB)</span>
+        </button>
       </div>
     </div>
   `;
@@ -48,7 +53,7 @@ function buildChoiceOverlay() {
   return choiceOverlay;
 }
 
-export function showExportChoice({ onQR, onPrint }) {
+export function showExportChoice({ onQR, onPrint, onGLB }) {
   const el = buildChoiceOverlay();
   el.classList.add("open");
 
@@ -66,12 +71,85 @@ export function showExportChoice({ onQR, onPrint }) {
     if (typeof onPrint === "function") onPrint();
   };
 
+  el.querySelector("#export-glb-btn").onclick = () => {
+    hideChoiceOverlay();
+    if (typeof onGLB === "function") onGLB();
+  };
+
   return () => hideChoiceOverlay();
 }
 
 function hideChoiceOverlay() {
   if (!choiceOverlay) return;
   choiceOverlay.classList.remove("open");
+}
+
+// ------------------------------------------------------------
+// 3D viewer prompt: current pot | load pot
+// ------------------------------------------------------------
+
+function buildViewerOverlay() {
+  if (viewerOverlay) return viewerOverlay;
+
+  viewerOverlay = document.createElement("div");
+  viewerOverlay.id = "viewer-choice-overlay";
+  viewerOverlay.className = "save-export";
+
+  viewerOverlay.innerHTML = `
+    <div class="save-export-card">
+      <button class="save-export-close" type="button" aria-label="Close">&times;</button>
+      <h2 class="save-export-title">3D Viewer</h2>
+      <p class="save-export-hint">
+        Would you like to open the 3D viewer for this pot, or load a different one?
+      </p>
+      <div class="export-choice-btns">
+        <button class="export-choice-btn" id="viewer-current-btn" type="button">
+          <i data-feather="box"></i>
+          <span>Current pot</span>
+        </button>
+        <button class="export-choice-btn" id="viewer-load-btn" type="button">
+          <i data-feather="upload-cloud"></i>
+          <span>Load pot</span>
+        </button>
+      </div>
+    </div>
+  `;
+
+  viewerOverlay.addEventListener("click", (e) => {
+    if (e.target === viewerOverlay) hideViewerOverlay();
+  });
+
+  viewerOverlay.querySelector(".save-export-close")
+    .addEventListener("click", hideViewerOverlay);
+
+  document.body.appendChild(viewerOverlay);
+  return viewerOverlay;
+}
+
+export function showViewerChoice({ onCurrentPot, onLoadPot }) {
+  const el = buildViewerOverlay();
+  el.classList.add("open");
+
+  if (window.feather) {
+    window.feather.replace();
+  }
+
+  el.querySelector("#viewer-current-btn").onclick = () => {
+    hideViewerOverlay();
+    if (typeof onCurrentPot === "function") onCurrentPot();
+  };
+
+  el.querySelector("#viewer-load-btn").onclick = () => {
+    hideViewerOverlay();
+    if (typeof onLoadPot === "function") onLoadPot();
+  };
+
+  return () => hideViewerOverlay();
+}
+
+function hideViewerOverlay() {
+  if (!viewerOverlay) return;
+  viewerOverlay.classList.remove("open");
 }
 
 // ------------------------------------------------------------
@@ -158,4 +236,5 @@ function hideQROverlay() {
 export function hideOverlay() {
   hideChoiceOverlay();
   hideQROverlay();
+  hideViewerOverlay();
 }

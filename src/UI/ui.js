@@ -1,5 +1,7 @@
 import "./ui.css";
 
+import { formatUnits } from "../core/measure.js";
+
 let currentIcon = "activity";
 import { PATTERNS } from "../core/constants.js";
 import { state } from "../core/state.js";
@@ -97,6 +99,7 @@ export function initUI({
   onLoad,
   onUndo,
   onGestureTest,
+  onView3D,
 }) {
   if (document.getElementById("ui-overlay")) return;
 
@@ -105,12 +108,14 @@ export function initUI({
 
   overlay.innerHTML = `
     <!-- =========================
-         Top-Left HUD
+         Top-Left Gesture Widget
+         (active gesture + guide "?" + test, all in one pill)
     ========================== -->
 
     <div class="hud-left-group">
 
-      <div class="hud-card">
+      <div class="hud-card gesture-widget">
+
         <span class="hud-dot"></span>
 
         <i
@@ -130,79 +135,51 @@ export function initUI({
             Sculpt Room
           </span>
         </div>
+
+        <div class="gesture-widget-icons">
+
+          <div class="hud-dropdown-wrapper">
+            <button
+              id="gesture-menu-btn"
+              class="hud-icon-btn tool-btn"
+              title="Gestures guide"
+              aria-label="Gestures guide"
+            >?</button>
+
+            <div
+              id="gesture-menu"
+              class="hud-dropdown"
+            ></div>
+          </div>
+
+          <button
+            id="gesture-test-btn"
+            class="hud-icon-btn tool-btn"
+            title="Gesture test"
+            aria-label="Gesture test"
+          >
+            <i data-feather="video"></i>
+          </button>
+
+        </div>
+
       </div>
-
-
-      <!-- =========================
-           Gesture Guide
-      ========================== -->
-
-      <div class="hud-dropdown-wrapper">
-
-        <button
-          id="gesture-menu-btn"
-          class="hud-btn secondary"
-        >
-          <i data-feather="help-circle"></i>
-
-          <span>Gestures Guide</span>
-
-          <i
-            data-feather="chevron-down"
-            class="chevron"
-          ></i>
-        </button>
-
-
-        <div
-          id="gesture-menu"
-          class="hud-dropdown"
-        ></div>
-
-      </div>
-
-
-      <!-- =========================
-           Gesture Test
-      ========================== -->
-
-      <button
-        id="gesture-test-btn"
-        class="hud-btn secondary"
-      >
-        <i data-feather="video"></i>
-
-        <span>Gesture Test</span>
-      </button>
 
     </div>
 
 
     <!-- =========================
          Top-Right Controls
+         (Done, Save, hamburger menu)
     ========================== -->
 
     <div class="hud-controls">
-
-      <!-- Sound -->
-
-      <button
-        id="btn-sound"
-        class="hud-btn icon-only"
-        title="Enable sound"
-      >
-        <i
-          id="sound-icon"
-          data-feather="volume-x"
-        ></i>
-      </button>
-
 
       <!-- Done -->
 
       <button
         id="btn-done"
-        class="hud-btn done-button"
+        class="hud-btn"
         title="Finish sculpting"
       >
         <i data-feather="check"></i>
@@ -210,42 +187,7 @@ export function initUI({
       </button>
 
 
-      <!-- Reset -->
-
-      <button
-        id="btn-reset"
-        class="hud-btn"
-      >
-        <i data-feather="rotate-ccw"></i>
-        <span>Reset Pot</span>
-      </button>
-
-      <!-- Undo -->
-
-      <button
-        id="btn-undo"
-        class="hud-btn"
-        style="display: none;"
-        title="Undo last pattern"
-      >
-        <i data-feather="corner-up-left"></i>
-        <span>Undo</span>
-      </button>
-
-
-      <!-- Load Progress -->
-
-      <button
-        id="btn-load"
-        class="hud-btn"
-        title="Load a saved pot by code"
-      >
-        <i data-feather="upload-cloud"></i>
-        <span>Load Progress</span>
-      </button>
-
-
-      <!-- Export -->
+      <!-- Save / Export -->
 
       <button
         id="btn-export"
@@ -254,6 +196,83 @@ export function initUI({
         <i data-feather="download"></i>
         <span>Save</span>
       </button>
+
+
+      <!-- Hamburger menu -->
+
+      <div class="hud-menu-wrapper">
+
+        <button
+          id="btn-menu"
+          class="hud-btn icon-only hud-menu-toggle"
+          title="More options"
+          aria-label="More options"
+        >
+          <i data-feather="menu"></i>
+        </button>
+
+        <div
+          id="hud-menu"
+          class="hud-menu"
+        >
+
+          <!-- Sound -->
+          <button
+            id="btn-sound"
+            class="hud-menu-item"
+            title="Enable sound"
+          >
+            <i
+              id="sound-icon"
+              data-feather="volume-x"
+            ></i>
+            <span>Sound</span>
+          </button>
+
+          <!-- Reset -->
+          <button
+            id="btn-reset"
+            class="hud-menu-item"
+            title="Reset pot to its starting shape"
+          >
+            <i data-feather="rotate-ccw"></i>
+            <span>Reset Pot</span>
+          </button>
+
+          <!-- Undo -->
+          <button
+            id="btn-undo"
+            class="hud-menu-item"
+            style="display: none;"
+            title="Undo last pattern"
+          >
+            <i data-feather="corner-up-left"></i>
+            <span>Undo</span>
+          </button>
+
+          <!-- Load Progress -->
+          <button
+            id="btn-load"
+            class="hud-menu-item"
+            title="Load a saved pot by code"
+          >
+            <i data-feather="upload-cloud"></i>
+            <span>Load Progress</span>
+          </button>
+
+          <!-- 3D Viewer -->
+          <button
+            id="btn-3dviewer"
+            class="hud-menu-item"
+            title="Open a saved pot in the 3D viewer"
+          >
+            <i data-feather="box"></i>
+            <span>3D Viewer</span>
+          </button>
+
+        </div>
+
+      </div>
 
     </div>
   `;
@@ -296,6 +315,23 @@ export function initUI({
       "click",
       onLoad,
     );
+
+
+  // =========================
+  // 3D Viewer
+  // =========================
+
+  const viewerBtn =
+    document.getElementById(
+      "btn-3dviewer",
+    );
+
+  if (viewerBtn && onView3D) {
+    viewerBtn.addEventListener(
+      "click",
+      onView3D,
+    );
+  }
 
 
   document
@@ -375,6 +411,46 @@ export function initUI({
   );
 
 
+  // =========================
+  // Hamburger menu (top-right)
+  // =========================
+
+  const menuToggle =
+    document.getElementById(
+      "btn-menu",
+    );
+
+  const hudMenu =
+    document.getElementById(
+      "hud-menu",
+    );
+
+  if (menuToggle && hudMenu) {
+    menuToggle.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+
+        hudMenu.classList.toggle(
+          "open",
+        );
+
+        menuToggle.classList.toggle(
+          "active",
+        );
+      },
+    );
+
+    // Clicking an item closes the menu.
+    hudMenu.addEventListener(
+      "click",
+      (e) => {
+        e.stopPropagation();
+      },
+    );
+  }
+
+
   document.addEventListener(
     "click",
     () => {
@@ -385,6 +461,16 @@ export function initUI({
       menuBtn.classList.remove(
         "active",
       );
+
+      if (hudMenu) {
+        hudMenu.classList.remove(
+          "open",
+        );
+
+        menuToggle.classList.remove(
+          "active",
+        );
+      }
     },
   );
 
@@ -847,4 +933,158 @@ export function updateThumbsUpTimer(progress) {
   const durationSeconds = state.thumbsUp.thumbsUpDuration / 1000;
   const remainingSeconds = Math.ceil(durationSeconds * (1 - progress));
   timerText.textContent = remainingSeconds;
+}
+
+// =========================
+// Measurements readout
+// (bottom-right, above the webcam preview)
+// =========================
+//
+// The chip shows one metric by default (height). Clicking it opens a drop-up
+// panel that reveals the other measurements (width / radius). Selecting a row
+// makes that metric the one displayed in the chip.
+
+const MEASURE_MODES = [
+  { id: "height", label: "Height", get: (m) => m.height },
+  { id: "width", label: "Max Ø", get: (m) => m.maxDiameter },
+  { id: "radius", label: "Radius", get: (m) => m.maxRadius },
+];
+
+let measureMode = "height";
+let measureReadoutEl = null;
+let measureChipValue = null;
+let measureRows = null;
+
+export function createMeasurementsReadout() {
+  if (document.getElementById("measure-readout")) return;
+
+  measureReadoutEl = document.createElement("div");
+  measureReadoutEl.id = "measure-readout";
+  measureReadoutEl.className = "measure-readout";
+
+  measureReadoutEl.innerHTML = `
+    <button id="measure-chip" class="measure-chip" type="button" aria-haspopup="true" aria-expanded="false">
+      <span class="measure-chip-label"></span>
+      <span class="measure-chip-value"></span>
+      <i data-feather="chevron-up" class="measure-caret"></i>
+    </button>
+
+    <div id="measure-dropup" class="measure-dropup" role="menu">
+      <div class="measure-dropup-title">Dimensions (cm · in)</div>
+      <div class="measure-dropup-rows"></div>
+    </div>
+  `;
+
+  document.body.appendChild(measureReadoutEl);
+
+  const chip = measureReadoutEl.querySelector("#measure-chip");
+  const dropup = measureReadoutEl.querySelector("#measure-dropup");
+  const rowsWrap = measureReadoutEl.querySelector(".measure-dropup-rows");
+
+  measureRows = MEASURE_MODES.map((mode) => {
+    const row = document.createElement("button");
+    row.type = "button";
+    row.className = "measure-row";
+    row.dataset.mode = mode.id;
+
+    row.innerHTML = `
+      <span class="measure-row-label">${mode.label}</span>
+      <span class="measure-row-value"></span>
+    `;
+
+    row.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setMeasureMode(mode.id);
+      closeMeasureDropup();
+    });
+
+    rowsWrap.appendChild(row);
+    return row;
+  });
+
+  chip.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = dropup.classList.contains("open");
+    if (isOpen) {
+      closeMeasureDropup();
+    } else {
+      dropup.classList.add("open");
+      chip.setAttribute("aria-expanded", "true");
+    }
+  });
+
+  document.addEventListener("click", () => closeMeasureDropup());
+
+  renderMeasureRows();
+  updateMeasureChip(null);
+}
+
+function closeMeasureDropup() {
+  if (!measureReadoutEl) return;
+  const dropup = measureReadoutEl.querySelector("#measure-dropup");
+  const chip = measureReadoutEl.querySelector("#measure-chip");
+  if (dropup) dropup.classList.remove("open");
+  if (chip) chip.setAttribute("aria-expanded", "false");
+}
+
+function setMeasureMode(id) {
+  measureMode = MEASURE_MODES.some((m) => m.id === id) ? id : "height";
+  renderMeasureRows();
+  updateMeasureChip(null);
+}
+
+function renderMeasureRows() {
+  if (!measureRows) return;
+  measureRows.forEach((row) => {
+    row.classList.toggle(
+      "active",
+      row.dataset.mode === measureMode,
+    );
+  });
+}
+
+function updateMeasureChip(measurements) {
+  if (!measureReadoutEl) return;
+
+  const mode = MEASURE_MODES.find((m) => m.id === measureMode);
+
+  const chipLabel = measureReadoutEl.querySelector(".measure-chip-label");
+  const chipValue = measureReadoutEl.querySelector(".measure-chip-value");
+
+  if (chipLabel && chipLabel.textContent !== mode.label) {
+    chipLabel.textContent = mode.label;
+  }
+
+  // Update chip value (guarded against churn: only when the text changes).
+  if (measurements && mode) {
+    const text = formatUnits(mode.get(measurements));
+    if (chipValue && chipValue.textContent !== text) {
+      chipValue.textContent = text;
+    }
+  }
+
+  // Update every row in the drop-up.
+  if (measureRows && measurements) {
+    MEASURE_MODES.forEach((m) => {
+      const row = measureRows.find((r) => r.dataset.mode === m.id);
+      const valueEl = row && row.querySelector(".measure-row-value");
+      if (valueEl) {
+        const text = formatUnits(m.get(measurements));
+        if (valueEl.textContent !== text) {
+          valueEl.textContent = text;
+        }
+      }
+    });
+  }
+}
+
+/**
+ * Refreshes the measurements readout with freshly computed scene-unit
+ * measurements. Called on a throttled cadence (~5s) from the animation loop.
+ */
+export function updateMeasurementsUI(measurements) {
+  if (!measureReadoutEl) {
+    createMeasurementsReadout();
+  }
+  updateMeasureChip(measurements);
 }

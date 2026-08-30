@@ -19,7 +19,7 @@ export const PAINT = {
 
 // SCULPT
 export const SCULPT = {
-  BRUSH_HEIGHT: 0.25,
+  BRUSH_HEIGHT: 0.10,
   CLAY_RESISTANCE: 0.05,
   MAX_FORCE: 0.005,
 };

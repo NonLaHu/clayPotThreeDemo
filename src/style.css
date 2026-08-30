@@ -607,6 +607,13 @@
   justify-content: center;
 }
 
+.pattern-image-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: flex;
+}
+
 .pattern-image-placeholder:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.2);
@@ -619,14 +626,18 @@
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.35);
 }
 
-.placeholder-content {
-  width: 100%;
-  height: 100%;
+.pattern-image-placeholder {
+  position: relative;
+}
+
+.pattern-image-placeholder .placeholder-content {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
 }
+
 
 .placeholder-content span {
   font-size: 10px;

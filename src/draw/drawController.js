@@ -6,6 +6,7 @@ import {
   mouse,
   PATTERNS
 } from "../core/constants.js";
+import { paintHighlight } from "../scene/create.js";
 
 import {
   isOpenPalm,

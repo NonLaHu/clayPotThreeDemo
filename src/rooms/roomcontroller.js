@@ -12,6 +12,7 @@ import {
 import {
   undoPaint
 } from "../draw/drawController.js";
+import { paintHighlight } from "../scene/create.js";
 
 
 
@@ -109,6 +110,8 @@ export function transitionToDrawRoom() {
   }
 
   setTimeout(() => {
+    paintHighlight.visible = false;
+
     // Hide painting UI
     if (colorSelector) {
       colorSelector.classList.remove("visible");

@@ -32,48 +32,61 @@ export const CLAY_POT = {
   THICKNESS : 0.05,
   CYLINDER_RADIUS : 0.7,
 };
-
 export const PATTERNS = [
   {
     id: "flower",
     src: "/patterns/flower.png",
     height: 0.50,
   },
-
   {
-    id: "flower2",
-    src: "/patterns/flower.png",
-    height: 0.10,
+    id: "meadow_floral",
+    src: "/patterns/Meadow floral, botanical florals, colorful, ivory_repeat_1.png",
+    height: 0.30,
   },
-
   {
-    id: "flower3",
-    src: "/patterns/flower.png",
+    id: "flower_repeat",
+    src: "/patterns/jpg(2)_repeat_2.png",
     height: 0.15,
   },
-
   {
-    id: "flower4",
-    src: "/patterns/flower.png",
-    height: 0.08,
+    id: "flower_rotated_original",
+    src: "/patterns/jpg_rotated.png",
+    height: 0.30,
   },
-
   {
-    id: "flower4",
-    src: "/patterns/flower.png",
-    height: 0.08,
+    id: "vintage_rose",
+    src: "/patterns/Vintage rose drawing with elegant Celtic patterns and swirling leaves illustration_rotated.png",
+    height: 0.30,
   },
-
   {
-    id: "flower4",
-    src: "/patterns/flower.png",
-    height: 0.08,
+    id: "flower4_rotated",
+    src: "/patterns/jpg(4)_rotated.png",
+    height: 0.40,
   },
-
   {
-    id: "flower4",
-    src: "/patterns/flower.png",
-    height: 0.08,
+    id: "flower3_repeat",
+    src: "/patterns/jpg(3)_rotated_repeat_2.png",
+    height: 0.30,
+  },
+  {
+    id: "flower1_padded",
+    src: "/patterns/jpg(1)_padded_shifted.png",
+    height: 0.50,
+  },
+  {
+    id: "flower5_padded",
+    src: "/patterns/jpg(5)_padded_shifted.png",
+    height: 0.50,
+  },
+  {
+    id: "flower6_padded",
+    src: "/patterns/jpg(6)_padded_shifted.png",
+    height: 0.50,
+  },
+  {
+    id: "flower8_padded",
+    src: "/patterns/jpg(8)_padded_shifted.png",
+    height: 0.50,
   },
 ];
 

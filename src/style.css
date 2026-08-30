@@ -570,21 +570,24 @@
 }
 
 .pattern-section-content {
-  max-height: 500px;
   overflow: hidden;
   transition: max-height 0.3s ease, opacity 0.3s ease;
   opacity: 1;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.pattern-section-content::-webkit-scrollbar {
-  display: none;
 }
 
 .pattern-section.collapsed .pattern-section-content {
   max-height: 0;
   opacity: 0;
+}
+
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 4px;
+
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .pattern-grid {

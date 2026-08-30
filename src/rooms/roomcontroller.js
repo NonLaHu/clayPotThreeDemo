@@ -9,9 +9,6 @@ import {
 import {
   updateStageUI
 } from "../UI/ui.js";
-import {
-  undoPaint
-} from "../draw/drawController.js";
 import { paintHighlight } from "../scene/create.js";
 
 
@@ -80,12 +77,6 @@ export function transitionToDrawRoom() {
   }
 
   updateStageUI();
-  document
-  .getElementById("btn-undo")
-  .addEventListener(
-    "click",
-    undoPaint
-  );
 
   const transitionOverlay =
     document.getElementById("transition-overlay");

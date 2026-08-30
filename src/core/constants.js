@@ -70,22 +70,22 @@ export const PATTERNS = [
   },
   {
     id: "flower1_padded",
-    src: "/patterns/jpg(1)_padded_shifted.png",
+    src: "/patterns/jpg(1)_padded.png",
     height: 0.50,
   },
   {
     id: "flower5_padded",
-    src: "/patterns/jpg(5)_padded_shifted.png",
+    src: "/patterns/jpg(5)_padded.png",
     height: 0.50,
   },
   {
     id: "flower6_padded",
-    src: "/patterns/jpg(6)_padded_shifted.png",
+    src: "/patterns/jpg(6)_padded.png",
     height: 0.50,
   },
   {
     id: "flower8_padded",
-    src: "/patterns/jpg(8)_padded_shifted.png",
+    src: "/patterns/jpg(8)_padded.png",
     height: 0.50,
   },
 ];

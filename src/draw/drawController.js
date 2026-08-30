@@ -20,9 +20,20 @@ import {
   updatePatternSelectionUI,
 } from "../UI/ui.js";
 
+
+const undoButton = document.getElementById("btn-undo");
+
+if (undoButton) {
+  undoButton.addEventListener("click", undoPaint);
+}
+
 let paintCanvas = null;
 let paintContext = null;
 let paintTexture = null;
+
+
+let lastStampTime = 0;
+const STAMP_COOLDOWN = 1000; // 1 second
 
 const PAINT_RESOLUTION = 2048;
 
@@ -495,116 +506,107 @@ function setSelectedPattern(index) {
 // ==========================================================
 // STAMP
 // ==========================================================
-function stampPattern(hit,pot) {
+function stampPattern(hit, pot) {
   if (
     !selectedPattern ||
     !patternTexture ||
     !paintContext ||
     !paintTexture
   ) {
-    return;
+    return false;
   }
 
   if (!hit.uv) {
-    console.warn(
-      "Pot geometry does not have UV coordinates."
-    );
-    return;
+    return false;
   }
 
-  const canvasWidth =
-    paintCanvas.width;
+  const canvasWidth = paintCanvas.width;
+  const canvasHeight = paintCanvas.height;
 
-  const canvasHeight =
-    paintCanvas.height;
-
-  // ----------------------------------------------------------
-  // PATTERN HEIGHT
-  //
-  // This is now controlled by STAMP_HEIGHT_RATIO.
-  //
-  // Example:
-  // 0.10 = 10% of pot height
-  // 0.20 = 20%
-  // 0.30 = 30%
-  // ----------------------------------------------------------
-
-  const potBox =
-    new THREE.Box3().setFromObject(
-      pot
-    );
+  const potBox = new THREE.Box3().setFromObject(pot);
 
   const potHeight =
-    potBox.max.y -
-    potBox.min.y;
+    potBox.max.y - potBox.min.y;
 
   const stampHeight =
     selectedPattern.height ?? 0.10;
 
-  const patternHeight =
-    Math.floor(
-      canvasHeight *
-      (stampHeight / potHeight)
-    );
+  const patternHeight = Math.floor(
+    canvasHeight * (stampHeight / potHeight)
+  );
 
   // ----------------------------------------------------------
-  // Finger's vertical UV position
+  // UV position
   // ----------------------------------------------------------
 
   const centerY =
-    (1 - hit.uv.y) *
-    canvasHeight;
+    (1 - hit.uv.y) * canvasHeight;
 
   const patternY =
-    centerY -
-    patternHeight / 2;
+    centerY - patternHeight / 2;
 
-  // ----------------------------------------------------------
-  // Pattern image
-  // ----------------------------------------------------------
+  // Raycast point becomes pattern START
+  const startX =
+    hit.uv.x * canvasWidth;
 
-  const image =
-    patternTexture.image;
+  const image = patternTexture.image;
 
   if (!image) {
-    return;
+    return false;
   }
-
-  // ----------------------------------------------------------
-  // Save before modifying canvas
-  // ----------------------------------------------------------
 
   savePaintState();
 
   // ----------------------------------------------------------
-  // Stamp
-  //
-  // Full width = entire circumference
-  // Height = STAMP_HEIGHT_RATIO
+  // Draw from raycast point to right edge
   // ----------------------------------------------------------
+
+  const firstWidth =
+    canvasWidth - startX;
 
   paintContext.drawImage(
     image,
-
     0,
     0,
-    image.width,
+    image.width * (firstWidth / canvasWidth),
     image.height,
 
-    0,
+    startX,
     patternY,
-    canvasWidth,
+    firstWidth,
     patternHeight
   );
+
+  // ----------------------------------------------------------
+  // Wrap remaining part to left side
+  // ----------------------------------------------------------
+
+  const remainingWidth =
+    canvasWidth - firstWidth;
+
+  if (remainingWidth > 0) {
+    paintContext.drawImage(
+      image,
+      image.width * (firstWidth / canvasWidth),
+      0,
+      image.width * (remainingWidth / canvasWidth),
+      image.height,
+
+      0,
+      patternY,
+      remainingWidth,
+      patternHeight
+    );
+  }
 
   paintTexture.needsUpdate = true;
 
   console.log(
-    "STAMP HEIGHT:",
-    stampHeight
+    `Pattern started at UV X: ${hit.uv.x.toFixed(3)}`
   );
-}
 
+  return true;
+}
 
 export function initDraw(
   scene,
@@ -876,23 +878,27 @@ if (patternPickerActive) {
   // ==========================================================
   // PINCH → STAMP
   // ==========================================================
+const pinchActive = pinch > 0.5;
 
-    const pinchActive = pinch > 0.5;
+if (pinchActive && !lastPinch) {
+  const now = performance.now();
 
-    if (pinchActive && !lastPinch) {
+  // 1-second cooldown after stamping
+  if (now - lastStampTime >= STAMP_COOLDOWN) {
     updateGestureHUD(
-        "Pinch",
-        "Pattern Stamped",
-        "Draw Room",
-        "check",
+      "Pinch",
+      "Pattern Stamped",
+      "Draw Room",
+      "check",
     );
 
-    stampPattern(
-        hit, pot
-    );
-    }
+    stampPattern(hit, pot);
 
-    lastPinch = pinchActive;
+    lastStampTime = now;
+  }
+}
+
+lastPinch = pinchActive;
 }
 
 // ==========================================================

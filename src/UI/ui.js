@@ -187,6 +187,19 @@ export function initUI({
       </button>
 
 
+      <!-- Undo -->
+
+      <button
+        id="btn-undo"
+        class="hud-btn"
+        style="display: none;"
+        title="Undo last pattern"
+      >
+        <i data-feather="corner-up-left"></i>
+        <span>Undo</span>
+      </button>
+
+
       <!-- Save / Export -->
 
       <button
@@ -237,17 +250,6 @@ export function initUI({
           >
             <i data-feather="rotate-ccw"></i>
             <span>Reset Pot</span>
-          </button>
-
-          <!-- Undo -->
-          <button
-            id="btn-undo"
-            class="hud-menu-item"
-            style="display: none;"
-            title="Undo last pattern"
-          >
-            <i data-feather="corner-up-left"></i>
-            <span>Undo</span>
           </button>
 
           <!-- Load Progress -->

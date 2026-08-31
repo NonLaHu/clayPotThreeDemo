@@ -38,6 +38,7 @@ import { deformClay } from "./sculpt/clayDeformer.js";
 import { updateHandInput } from "./interaction/handInput.js";
 import { initUI, updateGestureHUD, updateGestureGuide, initPatternPanel, setPatternSelectCallback, createColorLockTimer, showColorLockTimer, hideColorLockTimer, updateColorLockTimer, createThumbsUpTimer, showThumbsUpTimer, hideThumbsUpTimer, updateThumbsUpTimer, createMeasurementsReadout, updateMeasurementsUI } from "./UI/ui.js";
 import { openGestureTest, closeGestureTest } from "./UI/gestureTest.js";
+import { confirmReset } from "./UI/resetConfirm.js";
 
 import { createSaveFlow } from "./save/saveFlow.js";
 import { restorePotFromSave } from "./save/restorePot.js";
@@ -255,26 +256,16 @@ initUI({
   },
 
   // RESET
-  onReset: () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to reset your pottery progress?",
-    );
+  onReset: async () => {
+    const confirmed = await confirmReset();
 
     if (!confirmed) {
       return;
     }
 
-    const pos = geometry.attributes.position;
-
-    for (let i = 0; i < pos.count * 3; i++) {
-      pos.array[i] = initialClayPositions[i];
-
-      clayPositions[i] = initialClayPositions[i];
-    }
-
-    pos.needsUpdate = true;
-
-    geometry.computeVertexNormals();
+    // Hard reset: reload the page so every shape / color / pattern,
+    // UI overlay and gesture state returns to the initial step.
+    location.reload();
   },
 
   // EXPORT

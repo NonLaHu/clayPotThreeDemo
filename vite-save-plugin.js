@@ -164,6 +164,10 @@ export function saveServerPlugin() {
           }
 
           const photoUrl = `/s/${id}/photo.png`;
+          const hasPhoto = fs.existsSync(path.join(SAVE_DIR, `${id}.png`));
+          const photoAnchor = hasPhoto
+            ? `<a class="download" href="${photoUrl}" download="clay-pot-${id}.png">Save photo</a>`
+            : "";
           const saveData = JSON.parse(fs.readFileSync(jsonFile, "utf8"));
           const saveJson = JSON.stringify(saveData)
             .replace(/</g, "\\u003c")
@@ -246,7 +250,7 @@ export function saveServerPlugin() {
     </div>
     <div class="actions">
       <button class="download" id="dl-glb" type="button">Download 3D model (GLB)</button>
-      <a class="download" href="${photoUrl}" download="clay-pot-${id}.png">Save photo</a>
+      ${photoAnchor}
     </div>
     <div class="dims" id="pot-dims">
       <div class="dim-row"><span class="dim-label">Height</span><span class="dim-value" id="dim-height">–</span></div>

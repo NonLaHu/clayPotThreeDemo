@@ -183,7 +183,7 @@ The middle finger's vertical movement is used to calculate the height deformatio
 
 The clay height is constrained between:
 
-```text
+```text 
 0
 ↓
 4 units
